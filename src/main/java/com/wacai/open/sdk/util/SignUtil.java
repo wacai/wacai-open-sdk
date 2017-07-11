@@ -8,9 +8,8 @@ import org.apache.commons.codec.binary.Base64;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -19,48 +18,53 @@ public final class SignUtil {
 
     public static String generateSign(String plainText, String cipher) {
         Mac mac;
+        String algorithm = "hmacSha256";
         try {
-            mac = Mac.getInstance("hmacSha256");
+            mac = Mac.getInstance(algorithm);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("hmacSha256", e);
+            throw new RuntimeException(algorithm, e);
         }
         byte[] secretBytes = cipher.getBytes(StandardCharsets.UTF_8);
         try {
-            mac.init(new SecretKeySpec(secretBytes, "hmacSha256"));
+            mac.init(new SecretKeySpec(secretBytes, algorithm));
         } catch (InvalidKeyException e) {
             throw new RuntimeException("cipher : " + cipher, e);
         }
         byte[] signatureBytes = mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-        return Base64.encodeBase64String(signatureBytes);
+        return Base64.encodeBase64URLSafeString(signatureBytes);
     }
 
     public static String generateSign(Object object, String cipher) {
-        return generateSign(generateStringRecursively((JSONObject) JSON.toJSON(object)), cipher);
+        if (object == null) {
+            throw new IllegalArgumentException("object can't be null");
+        }
+        JSONObject jsonObject = object instanceof JSONObject ? (JSONObject) object
+                                                             : (JSONObject) JSON.toJSON(object);
+        return generateSign(generateStringRecursively(jsonObject), cipher);
     }
 
-    private static String generateStringRecursively(JSONObject apiParam) {
+    static String generateStringRecursively(JSONObject apiParam) {
         return generateStringRecursively(apiParam, 0);
     }
 
     private static String generateStringRecursively(JSONObject apiParam, int level) {
-        List<String> keyList = new ArrayList<>();
-        keyList.addAll(apiParam.keySet());
-        Collections.sort(keyList);
+        Map<String, Object> sortedMap = new TreeMap<>(apiParam);
 
         StringBuilder sb = new StringBuilder();
-        for (String key : keyList) {
-            if (level == 0 && "sign".equals(key)) {
+        for (Map.Entry<String, Object> entry : sortedMap.entrySet()) {
+            if (level == 0 && "sign".equals(entry.getKey())) {
                 continue;
             }
-            if (apiParam.get(key) == null) {
+            Object entryValue = entry.getValue();
+            if (entryValue == null) {
                 continue;
             }
 
-            if (apiParam.get(key) instanceof JSONObject) {
-                JSONObject value = (JSONObject) apiParam.get(key);
+            if (entryValue instanceof JSONObject) {
+                JSONObject value = (JSONObject) entryValue;
                 sb.append(generateStringRecursively(value, level + 1));
             } else {
-                sb.append(apiParam.getString(key));
+                sb.append(entryValue);
             }
         }
         return sb.toString();
