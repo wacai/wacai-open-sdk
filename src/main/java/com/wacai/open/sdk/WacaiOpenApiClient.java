@@ -33,7 +33,6 @@ import okhttp3.Response;
 
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_ACCESS_TOKEN;
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE;
-import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE_HEADERS;
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_TIMESTAMP;
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_VERSION;
 
@@ -183,7 +182,6 @@ public class WacaiOpenApiClient {
         headerMap.put(X_WAC_VERSION, String.valueOf(Version.getCurrentVersion()));
         headerMap.put(X_WAC_TIMESTAMP, String.valueOf(System.currentTimeMillis()));
         headerMap.put(X_WAC_ACCESS_TOKEN, accessTokenClient.getCachedAccessToken());
-        headerMap.put(X_WAC_SIGNATURE_HEADERS, X_WAC_VERSION + "," + X_WAC_TIMESTAMP + "," + X_WAC_ACCESS_TOKEN);
 
         String signature = generateSignature(wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest.getApiVersion(),
                                              headerMap, bodyBytes);
@@ -197,8 +195,7 @@ public class WacaiOpenApiClient {
 
     private String generateSignature(String apiName, String apiVersion,
                                      Map<String, String> headerMap, byte[] bodyBytes) {
-        String signHeaderString = headerMap.get(X_WAC_SIGNATURE_HEADERS);
-        List<String> signHeaders = Arrays.asList(signHeaderString.split(","));
+        List<String> signHeaders = Arrays.asList(X_WAC_VERSION , X_WAC_TIMESTAMP , X_WAC_ACCESS_TOKEN);
 
         String headerString = headerMap.entrySet().stream()
             .filter(entry -> signHeaders.contains(entry.getKey()))
