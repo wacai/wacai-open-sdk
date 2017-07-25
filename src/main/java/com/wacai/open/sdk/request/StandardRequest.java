@@ -9,23 +9,16 @@ import lombok.Data;
 @Data
 public class StandardRequest {
 
-    @JSONField(name = "_v")
-    private Integer version;
-
-    @JSONField(name = "api_name")
-    private String apiName;
-
-    @JSONField(name = "api_version")
-    private String apiVersion;
-
     @JSONField(name = "biz_params")
     private Map<String, Object> bizParams;
 
-    @JSONField(name = "ts")
-    private Long timestamp;
+    public static final String X_WAC_VERSION = "x-wac-version";
 
-    @JSONField(name = "access_token")
-    private String accessToken;
+    public static final String X_WAC_TIMESTAMP = "x-wac-timestamp";
 
-    private String sign;
+    public static final String X_WAC_SIGNATURE = "x-wac-signature";
+
+    public static final String X_WAC_ACCESS_TOKEN = "x-wac-access-token";
+
+    public static final String X_WAC_SIGNATURE_HEADERS = "x-wac-signature-headers";
 }

@@ -10,18 +10,32 @@ import com.wacai.open.sdk.response.WacaiOpenApiResponse;
 import com.wacai.open.sdk.response.WacaiOpenApiResponseCallback;
 import com.wacai.open.sdk.util.SignUtil;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
+
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
+import static com.wacai.open.sdk.request.StandardRequest.X_WAC_ACCESS_TOKEN;
+import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE;
+import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE_HEADERS;
+import static com.wacai.open.sdk.request.StandardRequest.X_WAC_TIMESTAMP;
+import static com.wacai.open.sdk.request.StandardRequest.X_WAC_VERSION;
 
 @Slf4j
 public class WacaiOpenApiClient {
@@ -41,17 +55,17 @@ public class WacaiOpenApiClient {
     private AtomicBoolean initFlag = new AtomicBoolean(false);
 
     @Setter
-    private String gatewayEntryUrl = "https://gw.wacai.com/api_entry";
+    private String gatewayEntryUrl = "https://open.wacai.com/gw/api_entry";
 
     @Setter
-    private String gatewayAuthUrl = "https://gw.wacai.com/auth";
+    private String gatewayAuthUrl = "https://open.wacai.com/gw/auth";
 
     public WacaiOpenApiClient(String appKey, String appSecret) {
         this.appKey = appKey;
         this.appSecret = appSecret;
     }
 
-    public void init() {
+    void init() {
 
         if (!initFlag.compareAndSet(false, true)) {
             throw new IllegalStateException("init state");
@@ -109,23 +123,11 @@ public class WacaiOpenApiClient {
         }
     }
 
-    private RequestBody assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
+    private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
         StandardRequest standardRequest = new StandardRequest();
-        standardRequest.setVersion(Version.getCurrentVersion());
-        standardRequest.setApiName(wacaiOpenApiRequest.getApiName());
-        standardRequest.setApiVersion(wacaiOpenApiRequest.getApiVersion());
-        standardRequest.setTimestamp(System.currentTimeMillis() / 1000);
-        standardRequest.setAccessToken(accessTokenClient.getCachedAccessToken());
         standardRequest.setBizParams(wacaiOpenApiRequest.getBizParam());
-
-        String sign = SignUtil.generateSign(standardRequest, appSecret);
-        standardRequest.setSign(sign);
-
-        String requestJson = JSON.toJSONString(standardRequest);
-        return RequestBody.create(JSON_MEDIA_TYPE, requestJson);
+        return JSON.toJSONBytes(standardRequest);
     }
-
-
 
     public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
                            final TypeReference<WacaiOpenApiResponse<T>> typeReference,
@@ -172,9 +174,41 @@ public class WacaiOpenApiClient {
             throw new IllegalStateException("Not initial client, please call init method before invoke");
         }
 
-        RequestBody body = assemblyRequestBody(wacaiOpenApiRequest);
+        byte[] bodyBytes = assemblyRequestBody(wacaiOpenApiRequest);
 
-        return new Request.Builder().url(gatewayEntryUrl)
-            .addHeader("Guard-Open-Request", "true").post(body).build();
+        String url = gatewayEntryUrl + "/" + wacaiOpenApiRequest.getApiName() + "/"
+                     + wacaiOpenApiRequest.getApiVersion();
+
+        Map<String, String> headerMap = new HashMap<>();
+        headerMap.put(X_WAC_VERSION, String.valueOf(Version.getCurrentVersion()));
+        headerMap.put(X_WAC_TIMESTAMP, String.valueOf(System.currentTimeMillis()));
+        headerMap.put(X_WAC_ACCESS_TOKEN, accessTokenClient.getCachedAccessToken());
+        headerMap.put(X_WAC_SIGNATURE_HEADERS, X_WAC_VERSION + "," + X_WAC_TIMESTAMP + "," + X_WAC_ACCESS_TOKEN);
+
+        String signature = generateSignature(wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest.getApiVersion(),
+                                             headerMap, bodyBytes);
+
+        headerMap.put(X_WAC_SIGNATURE, signature);
+
+        return new Request.Builder().url(url).headers(Headers.of(headerMap))
+            .post(RequestBody.create(JSON_MEDIA_TYPE, bodyBytes))
+            .build();
+    }
+
+    private String generateSignature(String apiName, String apiVersion,
+                                     Map<String, String> headerMap, byte[] bodyBytes) {
+        String signHeaderString = headerMap.get(X_WAC_SIGNATURE_HEADERS);
+        List<String> signHeaders = Arrays.asList(signHeaderString.split(","));
+
+        String headerString = headerMap.entrySet().stream()
+            .filter(entry -> signHeaders.contains(entry.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + "=" + entry.getValue())
+            .reduce("", String::concat);
+
+        String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
+
+        String signPlainText = apiName + apiVersion + headerString + bodyMd5;
+        return SignUtil.generateSign(signPlainText, appSecret);
     }
 }
