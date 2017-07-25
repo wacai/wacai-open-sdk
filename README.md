@@ -29,31 +29,23 @@
 
 #### 代码案例
 
-##### 同步方式：
+##### 构建Client和Request
 ```java
-WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient("dasdklafjaksjfkla", "dasdklafjaksjfkla");
-wacaiOpenApiClient.setGatewayEntryUrl("https://gw.wacai.com/api_entry");
-wacaiOpenApiClient.setGatewayAuthUrl("https://gw.wacai.com/auth");
+WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient("${appKey}", "${appSecret}");
 wacaiOpenApiClient.init();
 
 WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.order.delete", "v2");
 wacaiOpenApiRequest.putBizParam("card_id", "34121141242144");
 wacaiOpenApiRequest.putBizParam("apply_money", 10);
+```
 
+##### 同步方式：
+```java
 WacaiOpenApiResponse<OrderDeleteResponseObject> wacaiOpenApiResponse = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<WacaiOpenApiResponse<OrderDeleteResponseObject>>() {});
 ```
 
 ##### 异步方式：
 ```java
-WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient("dasdklafjaksjfkla", "dasdklafjaksjfkla");
-wacaiOpenApiClient.setGatewayEntryUrl("https://gw.wacai.com/api_entry");
-wacaiOpenApiClient.setGatewayAuthUrl("https://gw.wacai.com/auth");
-wacaiOpenApiClient.init();
-
-WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.order.delete", "v2");
-wacaiOpenApiRequest.putBizParam("card_id", "123141907124091740");
-wacaiOpenApiRequest.putBizParam("apply_money", 10);
-
 wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<WacaiOpenApiResponse<OrderDeleteResponseObject>>() {}, new WacaiOpenApiResponseCallback<OrderDeleteResponseObject>() {
     @Override
     public void onSuccess(OrderDeleteResponseObject data){
