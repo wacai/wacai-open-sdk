@@ -15,6 +15,7 @@
 - 封装和API网关[协议](doc/api_entry.md)实现细节
 - 封装参数[签名](doc/api_sign.md)逻辑
 - 提供同步和异步回调实现，方便适应不同的编程模式
+- 被调用时的参数[请求签名校验](doc/request_sign.md)
 
 #### 核心依赖
 - okhttp3 用于在http层面做通信

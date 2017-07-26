@@ -19,4 +19,6 @@ public class StandardRequest {
     public static final String X_WAC_SIGNATURE = "x-wac-signature";
 
     public static final String X_WAC_ACCESS_TOKEN = "x-wac-access-token";
+
+    public static final String X_WAC_SIGNATURE_HEADERS = "x-wac-signature-headers";
 }
