@@ -201,7 +201,8 @@ public class WacaiOpenApiClient {
             .filter(entry -> signHeaders.contains(entry.getKey()))
             .sorted(Map.Entry.comparingByKey())
             .map(entry -> entry.getKey() + "=" + entry.getValue())
-            .reduce("", (s, s1) -> s + "&" + s1);
+            .reduce((s, s1) -> s + "&" + s1)
+            .orElse("");
 
         String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
 

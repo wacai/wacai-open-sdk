@@ -22,7 +22,6 @@ String headerString = header1Name + "=" + header1Value + "&" +
 ```java
 String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
 ```
-
 ### 生成签名的算法
 ```java
     public static String generateSign(String plainText, String appSecret) {
@@ -39,7 +38,7 @@ String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
             throw new RuntimeException("invalid key appSecret : " + appSecret, e);
         }
         byte[] signatureBytes = mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-        return Base64.encodeBase64String(signatureBytes);
+        return Base64.encodeBase64URLSafeString(signatureBytes);
     }
 ```
 appSecret即最初分发的秘钥。

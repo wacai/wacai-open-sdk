@@ -33,7 +33,7 @@ public final class SignUtil {
             throw new RuntimeException("cipher : " + cipher, e);
         }
         byte[] signatureBytes = mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-        return Base64.encodeBase64String(signatureBytes);
+        return Base64.encodeBase64URLSafeString(signatureBytes);
     }
 
     /**
@@ -59,7 +59,8 @@ public final class SignUtil {
                     value = "";
                 }
                 return entry.getKey().toLowerCase() + "=" + value;
-            }).reduce("", (s1, s2) -> s1 + "&" + s2);
+            }).reduce((s1, s2) -> s1 + "&" + s2)
+            .orElse("");
 
         String paramString = params.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
@@ -69,7 +70,8 @@ public final class SignUtil {
                     value = "";
                 }
                 return entry.getKey() + "=" + value;
-            }).reduce("", (s1, s2) -> s1 + "&" + s2);
+            }).reduce((s1, s2) -> s1 + "&" + s2)
+            .orElse("");
 
         String signPlainText = method + delimit + bodyMd5 + delimit + headerString + delimit + paramString;
         String signature = generateSign(signPlainText, appSecret);
