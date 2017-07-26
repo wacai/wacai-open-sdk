@@ -2,7 +2,7 @@
 
 ### 参与签名计算的核心算法
 ```java
-String signPlainText = apiName + apiVersion + headerString + bodyMd5;
+String signPlainText = apiName + "|" + apiVersion + "|" + headerString + "|" + bodyMd5;
 ```
 apiName和apiVersion是指调用的接口名称和版本，这个不难理解。
 
@@ -11,9 +11,9 @@ Headers 是指参与 Headers 签名计算的 Header 的 Key、Value 拼接的字
 
 对需要参与计算的header按照headerName的字母表升序排列，对排序之后的header列表做字符串拼接，如下代码所示
 ```java
-String headerString = header1Name + "=" + header1Value + 
-                      header2Name + "=" + header2Value +
-                      header3Name + "=" + header3Value +
+String headerString = header1Name + "=" + header1Value + "&" +
+                      header2Name + "=" + header2Value + "&" +
+                      header3Name + "=" + header3Value + "&" +
                       ...
                       headernName + "=" + headernValue;
 ```
