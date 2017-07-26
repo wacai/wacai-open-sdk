@@ -3,7 +3,7 @@
 ### 采用OAuth 2机制，具体可以参考[这里](http://www.ruanyifeng.com/blog/2014/05/oauth_2_0.html)
 
 ### 鉴权和授权入口
-- 测试环境统一入口是`http://guard.test.wacai.info/auth`
+- 环境统一入口是`https://open.wacai.com/gw/auth`
 - 统一使用POST表单提交
 
 #### 生成access_token和refresh_token

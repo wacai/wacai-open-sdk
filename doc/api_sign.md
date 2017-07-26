@@ -43,5 +43,5 @@ String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
 ```
 appSecret即最初分发的秘钥。
 
-具体实现细节可参考[sdk](api_sdk.md)中的实现。
+具体实现细节可参考当前sdk中的实现，建议直接使用当前sdk来和API网关通信。
 

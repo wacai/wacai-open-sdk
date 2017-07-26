@@ -1,8 +1,8 @@
 ## 入口
 
 ### 协议
-- 使用HTTP(S)协议作为目前的交互协议
-- 测试环境下网关的统一入口是 `http://guard.test.wacai.info/api_entry`
+- 使用HTTPS协议作为目前的交互协议
+- 环境下网关的统一入口是 `https://open.wacai.com/gw/api_entry`
 - 客户端统一使用POST方式向网关入口提交数据
 - 客户端和开放网关的请求报文、响应报文格式都是JSON，content_type为application/json
 - 交互的编码格式统一为UTF-8
@@ -36,14 +36,10 @@
                 "d": 2017 
              }
           }
-      },
-      "system_params":
-      {
-          "param_03": ""
       }
   }
 ```
-其中，biz_params内存放的是业务参数，是和api直接相关的，system_params是用来传递给API网关的一些参数，比如调用回调接口需要告诉API网关要调用哪个合作商的回调接口，需要传递合作商的app_id，此时app_id就放在system_params里边传给API网关的。
+其中，biz_params内存放的是业务参数，是和api直接相关的。
 
 ### 响应报文
 - 同样看下响应体的案例：
