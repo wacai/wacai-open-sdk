@@ -8,7 +8,7 @@ apiName和apiVersion是指调用的接口名称和版本，这个不难理解。
 
 #### headerString
 Headers 是指参与 Headers 签名计算的 Header 的 Key、Value 拼接的字符串，目前只有header中的x-wac-timestamp、x-wac-access-token、x-wac-version参与计算。
-对需要参与计算的header按照headerName的字母升序排列之后，连接起来，如下代码所示
+对需要参与计算的header按照headerName的字母表升序排列，对排序之后的header列表做字符串拼接，如下代码所示
 ```java
 String headerString = header1Name + "=" + header1Value + 
                       header2Name + "=" + header2Value +
