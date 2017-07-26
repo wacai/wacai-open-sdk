@@ -201,11 +201,11 @@ public class WacaiOpenApiClient {
             .filter(entry -> signHeaders.contains(entry.getKey()))
             .sorted(Map.Entry.comparingByKey())
             .map(entry -> entry.getKey() + "=" + entry.getValue())
-            .reduce("", String::concat);
+            .reduce("", (s, s1) -> s + "&" + s1);
 
         String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
 
-        String signPlainText = apiName + apiVersion + headerString + bodyMd5;
+        String signPlainText = apiName + "|" + apiVersion + "|" + headerString + "|" + bodyMd5;
         return SignUtil.generateSign(signPlainText, appSecret);
     }
 }
