@@ -64,7 +64,7 @@ public class AccessTokenClient {
     }
 
     private AccessToken applyAccessToken() {
-        long timestamp = System.currentTimeMillis() / 1000;
+        long timestamp = System.currentTimeMillis();
         String sign = SignUtil.generateSign(appKey + "client_credentials" + timestamp, appSecret);
 
         RequestBody body = new FormBody.Builder()
@@ -78,7 +78,7 @@ public class AccessTokenClient {
     }
 
     private AccessToken refreshAccessToken() {
-        long timestamp = System.currentTimeMillis() / 1000;
+        long timestamp = System.currentTimeMillis();
         String sign = SignUtil.generateSign(appKey + "refresh_token"
                                             + accessTokenCached.getRefreshToken() + timestamp, appSecret);
 
