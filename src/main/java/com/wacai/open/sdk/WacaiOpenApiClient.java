@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.wacai.open.sdk.auth.AccessTokenClient;
 import com.wacai.open.sdk.errorcode.ErrorCode;
-import com.wacai.open.sdk.request.StandardRequest;
 import com.wacai.open.sdk.request.WacaiOpenApiRequest;
 import com.wacai.open.sdk.response.WacaiOpenApiResponse;
 import com.wacai.open.sdk.response.WacaiOpenApiResponseCallback;
@@ -30,17 +29,22 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_ACCESS_TOKEN;
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE;
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_TIMESTAMP;
 import static com.wacai.open.sdk.request.StandardRequest.X_WAC_VERSION;
+import static java.util.stream.Collectors.joining;
 
 @Slf4j
 public class WacaiOpenApiClient {
 
     private static final MediaType JSON_MEDIA_TYPE
         = MediaType.parse("application/json; charset=utf-8");
+
+    private static final List<String> SIGN_HEADERS = Arrays.asList(X_WAC_VERSION, X_WAC_TIMESTAMP,
+                                                                   X_WAC_ACCESS_TOKEN);
 
     private final String appKey;
 
@@ -95,14 +99,15 @@ public class WacaiOpenApiClient {
 
         Request request = assemblyRequest(wacaiOpenApiRequest);
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
+            ResponseBody body = response.body();
+            if (!response.isSuccessful() || body == null) {
                 WacaiOpenApiResponse<T> wacaiOpenApiResponse = new WacaiOpenApiResponse<>();
                 wacaiOpenApiResponse.setCode(ErrorCode.SYSTEM_ERROR.getCode());
                 wacaiOpenApiResponse.setError(ErrorCode.SYSTEM_ERROR.getDescription());
                 return wacaiOpenApiResponse;
             }
 
-            String responseBodyString = response.body().string();
+            String responseBodyString = body.string();
             WacaiOpenApiResponse<T> openApiResponse = JSON.parseObject(responseBodyString, typeReference);
             if (openApiResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
                 || openApiResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
@@ -123,9 +128,7 @@ public class WacaiOpenApiClient {
     }
 
     private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
-        StandardRequest standardRequest = new StandardRequest();
-        standardRequest.setBizParams(wacaiOpenApiRequest.getBizParam());
-        return JSON.toJSONBytes(standardRequest);
+        return JSON.toJSONBytes(wacaiOpenApiRequest.getBizParam());
     }
 
     public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
@@ -142,13 +145,14 @@ public class WacaiOpenApiClient {
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                if (!response.isSuccessful() || response.body() == null) {
+                ResponseBody body = response.body();
+                if (!response.isSuccessful() || body == null) {
                     callback.onFailure(ErrorCode.SYSTEM_ERROR.getCode(),
                                        ErrorCode.SYSTEM_ERROR.getDescription());
                     return;
                 }
 
-                String responseBodyString = response.body().string();
+                String responseBodyString = body.string();
                 WacaiOpenApiResponse<T> openApiResponse = JSON.parseObject(responseBodyString, typeReference);
                 if (!openApiResponse.isSuccess()) {
                     if (openApiResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
@@ -175,9 +179,6 @@ public class WacaiOpenApiClient {
 
         byte[] bodyBytes = assemblyRequestBody(wacaiOpenApiRequest);
 
-        String url = gatewayEntryUrl + "/" + wacaiOpenApiRequest.getApiName() + "/"
-                     + wacaiOpenApiRequest.getApiVersion();
-
         Map<String, String> headerMap = new HashMap<>();
         headerMap.put(X_WAC_VERSION, String.valueOf(Version.getCurrentVersion()));
         headerMap.put(X_WAC_TIMESTAMP, String.valueOf(System.currentTimeMillis()));
@@ -185,9 +186,10 @@ public class WacaiOpenApiClient {
 
         String signature = generateSignature(wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest.getApiVersion(),
                                              headerMap, bodyBytes);
-
         headerMap.put(X_WAC_SIGNATURE, signature);
 
+        String url = gatewayEntryUrl + "/" + wacaiOpenApiRequest.getApiName() + "/"
+                     + wacaiOpenApiRequest.getApiVersion();
         return new Request.Builder().url(url).headers(Headers.of(headerMap))
             .post(RequestBody.create(JSON_MEDIA_TYPE, bodyBytes))
             .build();
@@ -195,14 +197,12 @@ public class WacaiOpenApiClient {
 
     private String generateSignature(String apiName, String apiVersion,
                                      Map<String, String> headerMap, byte[] bodyBytes) {
-        List<String> signHeaders = Arrays.asList(X_WAC_VERSION , X_WAC_TIMESTAMP , X_WAC_ACCESS_TOKEN);
 
         String headerString = headerMap.entrySet().stream()
-            .filter(entry -> signHeaders.contains(entry.getKey()))
+            .filter(entry -> SIGN_HEADERS.contains(entry.getKey()))
             .sorted(Map.Entry.comparingByKey())
             .map(entry -> entry.getKey() + "=" + entry.getValue())
-            .reduce((s, s1) -> s + "&" + s1)
-            .orElse("");
+            .collect(joining("&"));
 
         String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
 
