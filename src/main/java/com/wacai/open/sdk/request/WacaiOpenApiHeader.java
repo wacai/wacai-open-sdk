@@ -14,4 +14,6 @@ public class WacaiOpenApiHeader {
     public static final String X_WAC_ACCESS_TOKEN = "x-wac-access-token";
 
     public static final String X_WAC_SIGNATURE_HEADERS = "x-wac-signature-headers";
+
+    public static final String X_WAC_SDK_VERSION = "x-wac-sdk-version";
 }

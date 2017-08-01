@@ -33,6 +33,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_ACCESS_TOKEN;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SDK_VERSION;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TIMESTAMP;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_VERSION;
@@ -183,9 +184,10 @@ public class WacaiOpenApiClient {
         byte[] bodyBytes = assemblyRequestBody(wacaiOpenApiRequest);
 
         Map<String, String> headerMap = new HashMap<>();
-        headerMap.put(X_WAC_VERSION, String.valueOf(Version.getCurrentVersion()));
+        headerMap.put(X_WAC_VERSION, String.valueOf(Version.getProtocolVersion()));
         headerMap.put(X_WAC_TIMESTAMP, String.valueOf(System.currentTimeMillis()));
         headerMap.put(X_WAC_ACCESS_TOKEN, accessTokenClient.getCachedAccessToken());
+        headerMap.put(X_WAC_SDK_VERSION, Version.getSdkVersion());
 
         String signature = generateSignature(wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest.getApiVersion(),
                                              headerMap, bodyBytes);
