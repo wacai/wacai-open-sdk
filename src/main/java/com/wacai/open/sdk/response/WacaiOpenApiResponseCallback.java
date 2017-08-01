@@ -1,8 +1,10 @@
 package com.wacai.open.sdk.response;
 
+import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
+
 public interface WacaiOpenApiResponseCallback<T> {
 
     void onSuccess(T data);
 
-    void onFailure(int code, String error);
+    void onFailure(WacaiOpenApiResponseException ex);
 }

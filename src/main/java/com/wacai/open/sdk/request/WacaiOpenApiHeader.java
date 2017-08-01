@@ -1,16 +1,9 @@
 package com.wacai.open.sdk.request;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import lombok.experimental.UtilityClass;
 
-import java.util.Map;
-
-import lombok.Data;
-
-@Data
-public class StandardRequest {
-
-    @JSONField(name = "biz_params")
-    private Map<String, Object> bizParams;
+@UtilityClass
+public class WacaiOpenApiHeader {
 
     public static final String X_WAC_VERSION = "x-wac-version";
 

@@ -4,8 +4,9 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.wacai.open.sdk.auth.AccessTokenClient;
 import com.wacai.open.sdk.errorcode.ErrorCode;
+import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
 import com.wacai.open.sdk.request.WacaiOpenApiRequest;
-import com.wacai.open.sdk.response.WacaiOpenApiResponse;
+import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.response.WacaiOpenApiResponseCallback;
 import com.wacai.open.sdk.util.SignUtil;
 
@@ -31,10 +32,10 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-import static com.wacai.open.sdk.request.StandardRequest.X_WAC_ACCESS_TOKEN;
-import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE;
-import static com.wacai.open.sdk.request.StandardRequest.X_WAC_TIMESTAMP;
-import static com.wacai.open.sdk.request.StandardRequest.X_WAC_VERSION;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_ACCESS_TOKEN;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TIMESTAMP;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_VERSION;
 import static java.util.stream.Collectors.joining;
 
 @Slf4j
@@ -93,37 +94,35 @@ public class WacaiOpenApiClient {
         wacaiOpenApiClient.init();
         return wacaiOpenApiClient;
     }
-
-    public <T> WacaiOpenApiResponse<T> invoke(WacaiOpenApiRequest wacaiOpenApiRequest,
-                                              TypeReference<WacaiOpenApiResponse<T>> typeReference) {
+    public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
 
         Request request = assemblyRequest(wacaiOpenApiRequest);
         try (Response response = client.newCall(request).execute()) {
             ResponseBody body = response.body();
-            if (!response.isSuccessful() || body == null) {
-                WacaiOpenApiResponse<T> wacaiOpenApiResponse = new WacaiOpenApiResponse<>();
-                wacaiOpenApiResponse.setCode(ErrorCode.SYSTEM_ERROR.getCode());
-                wacaiOpenApiResponse.setError(ErrorCode.SYSTEM_ERROR.getDescription());
-                return wacaiOpenApiResponse;
+            if (response.code() != 200 || body == null) {
+                if (response.code() != 400 || body == null) {
+                    throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+                }
+
+                String responseBodyString = body.string();
+                WacaiErrorResponse wacaiErrorResponse =
+                    JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
+                    || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
+
+                    log.info("Access token invalid or expired, apply new one instead.");
+                    accessTokenClient.setForceCacheInvalid(true);
+                    return invoke(wacaiOpenApiRequest, typeReference);
+                }
+                throw new WacaiOpenApiResponseException(wacaiErrorResponse);
             }
 
             String responseBodyString = body.string();
-            WacaiOpenApiResponse<T> openApiResponse = JSON.parseObject(responseBodyString, typeReference);
-            if (openApiResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
-                || openApiResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
-
-                log.info("Access token invalid or expired, apply new one instead.");
-                accessTokenClient.setForceCacheInvalid(true);
-                return invoke(wacaiOpenApiRequest, typeReference);
-            }
-            return openApiResponse;
+            return JSON.parseObject(responseBodyString, typeReference);
         } catch (IOException e) {
             log.error("failed to execute {}", request, e);
 
-            WacaiOpenApiResponse<T> wacaiOpenApiResponse = new WacaiOpenApiResponse<>();
-            wacaiOpenApiResponse.setCode(ErrorCode.SYSTEM_ERROR.getCode());
-            wacaiOpenApiResponse.setError(ErrorCode.SYSTEM_ERROR.getDescription());
-            return wacaiOpenApiResponse;
+            throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
         }
     }
 
@@ -132,41 +131,45 @@ public class WacaiOpenApiClient {
     }
 
     public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
-                           final TypeReference<WacaiOpenApiResponse<T>> typeReference,
+                           final TypeReference<T> typeReference,
                            final WacaiOpenApiResponseCallback<T> callback) {
         Request request = assemblyRequest(wacaiOpenApiRequest);
 
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                callback.onFailure(ErrorCode.SYSTEM_ERROR.getCode(),
-                                   ErrorCode.SYSTEM_ERROR.getDescription());
+                callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e));
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 ResponseBody body = response.body();
-                if (!response.isSuccessful() || body == null) {
-                    callback.onFailure(ErrorCode.SYSTEM_ERROR.getCode(),
-                                       ErrorCode.SYSTEM_ERROR.getDescription());
+                if (body == null) {
+                    callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
                     return;
                 }
 
                 String responseBodyString = body.string();
-                WacaiOpenApiResponse<T> openApiResponse = JSON.parseObject(responseBodyString, typeReference);
-                if (!openApiResponse.isSuccess()) {
-                    if (openApiResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
-                        || openApiResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
+                if (response.code() == 400) {
+                    WacaiErrorResponse wacaiErrorResponse =
+                        JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                    if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
+                        || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
 
                         log.info("Access token invalid or expired, apply new one instead.");
                         accessTokenClient.setForceCacheInvalid(true);
                         invoke(wacaiOpenApiRequest, typeReference, callback);
                     } else {
-                        callback.onFailure(openApiResponse.getCode(), openApiResponse.getError());
+                        callback.onFailure(new WacaiOpenApiResponseException(wacaiErrorResponse));
                     }
-                } else {
-                    callback.onSuccess(openApiResponse.getData());
+                } else if (response.code() != 200) {
+                    log.error("request {}, response code is {}", wacaiOpenApiRequest, response.code());
+
+                    callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+                    return;
                 }
+
+                callback.onSuccess(JSON.parseObject(responseBodyString, typeReference));
             }
         });
     }

@@ -1,11 +1,10 @@
 package com.wacai.open.sdk.auth;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
-import com.wacai.open.sdk.WacaiOpenApiException;
 import com.wacai.open.sdk.errorcode.ErrorCode;
+import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
 import com.wacai.open.sdk.response.AccessToken;
-import com.wacai.open.sdk.response.WacaiOpenApiResponse;
+import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.util.SignUtil;
 
 import java.io.IOException;
@@ -36,7 +35,7 @@ public class AccessTokenClient {
     private Date accessTokenExpireDate;
 
     @Setter
-    private String gatewayAuthUrl = "https://gw.wacai.com/auth";
+    private String gatewayAuthUrl = "https://open.wacai.com/gw/auth";
 
     /**
      * 用来AccessToken强制缓存重新加载
@@ -78,7 +77,7 @@ public class AccessTokenClient {
     }
 
     private AccessToken refreshAccessToken() {
-        long timestamp = System.currentTimeMillis();
+        long timestamp = System.currentTimeMillis() ;
         String sign = SignUtil.generateSign(appKey + "refresh_token"
                                             + accessTokenCached.getRefreshToken() + timestamp, appSecret);
 
@@ -92,7 +91,7 @@ public class AccessTokenClient {
         Request request = new Request.Builder().url(gatewayAuthUrl + "/refresh").post(body).build();
         try {
             return sendRequest(request);
-        } catch (WacaiOpenApiException e) {
+        } catch (WacaiOpenApiResponseException e) {
             if (e.getCode() == ErrorCode.INVALID_REFRESH_TOKEN.getCode()
                 || e.getCode() == ErrorCode.REFRESH_TOKEN_EXPIRED.getCode()) {
 
@@ -108,23 +107,20 @@ public class AccessTokenClient {
         try (Response response = client.newCall(request).execute()) {
 
             ResponseBody responseBody = response.body();
-            if (!response.isSuccessful() || responseBody == null) {
-                throw new WacaiOpenApiException("http code " + response.code());
+            if (responseBody == null) {
+                throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+            }
+            if (response.code() == 400) {
+                WacaiErrorResponse wacaiErrorResponse =
+                    JSON.parseObject(responseBody.string(), WacaiErrorResponse.class);
+                throw new WacaiOpenApiResponseException(wacaiErrorResponse);
+            } else if (response.code() != 200) {
+                throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
             }
 
-            WacaiOpenApiResponse<AccessToken> openApiResponse =
-                JSON.parseObject(responseBody.string(), new TypeReference<WacaiOpenApiResponse<AccessToken>>() {
-                });
-
-            if (!openApiResponse.isSuccess()) {
-                WacaiOpenApiException openApiException = new WacaiOpenApiException(openApiResponse.getError());
-                openApiException.setCode(openApiResponse.getCode());
-                throw openApiException;
-            }
-
-            return openApiResponse.getData();
+            return JSON.parseObject(responseBody.string(), AccessToken.class);
         } catch (IOException e) {
-            throw new WacaiOpenApiException("failed to fetch access token", e);
+            throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
         }
     }
 }

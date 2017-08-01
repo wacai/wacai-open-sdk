@@ -13,8 +13,9 @@ import java.util.Objects;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE;
-import static com.wacai.open.sdk.request.StandardRequest.X_WAC_SIGNATURE_HEADERS;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE_HEADERS;
+import static java.util.stream.Collectors.joining;
 
 public final class SignUtil {
 
@@ -59,8 +60,8 @@ public final class SignUtil {
                     value = "";
                 }
                 return entry.getKey().toLowerCase() + "=" + value;
-            }).reduce((s1, s2) -> s1 + "&" + s2)
-            .orElse("");
+            })
+            .collect(joining("&"));
 
         String paramString = params.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
@@ -70,8 +71,8 @@ public final class SignUtil {
                     value = "";
                 }
                 return entry.getKey() + "=" + value;
-            }).reduce((s1, s2) -> s1 + "&" + s2)
-            .orElse("");
+            })
+            .collect(joining("&"));
 
         String signPlainText = method + delimit + bodyMd5 + delimit + headerString + delimit + paramString;
         String signature = generateSign(signPlainText, appSecret);
