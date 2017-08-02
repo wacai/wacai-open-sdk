@@ -50,7 +50,7 @@
 - 非正常响应的结构
 ```json
   {
-    "code": xxx,
+    "code": xxx,
     "error": "xxxxxx"
   }
 ```
