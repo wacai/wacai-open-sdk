@@ -42,20 +42,21 @@ wacaiOpenApiRequest.putBizParam("apply_money", 10);
 
 ##### 同步方式：
 ```java
-WacaiOpenApiResponse<OrderDeleteResponseObject> wacaiOpenApiResponse = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<WacaiOpenApiResponse<OrderDeleteResponseObject>>() {});
+OrderDeleteResponseObject wacaiOpenApiResponse = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<OrderDeleteResponseObject>() {});
 ```
+**同步接口在异常返回时会抛出 WacaiOpenApiResponseException 异常，里边可以获取响应的错误码和详细的错误信息**
 
 ##### 异步方式：
 ```java
-wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<WacaiOpenApiResponse<OrderDeleteResponseObject>>() {}, new WacaiOpenApiResponseCallback<OrderDeleteResponseObject>() {
+wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<OrderDeleteResponseObject>() {}, new WacaiOpenApiResponseCallback<OrderDeleteResponseObject>() {
     @Override
     public void onSuccess(OrderDeleteResponseObject data){
         log.error("success {}", data);
     }
 
     @Override
-    public void onFailure(int code, String error) {
-        log.error("failure {} {}", code, error);
+    public void onFailure(WacaiOpenApiResponseException ex) {
+        log.error("failure {}", ex);
     }
 });
 ```
