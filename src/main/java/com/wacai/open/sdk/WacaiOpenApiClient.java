@@ -14,6 +14,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -95,7 +96,16 @@ public class WacaiOpenApiClient {
         wacaiOpenApiClient.init();
         return wacaiOpenApiClient;
     }
-    public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
+
+    public <T> T Invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
+        return doInvoke(wacaiOpenApiRequest, typeReference.getType());
+    }
+
+    public <T> T Invoke(WacaiOpenApiRequest wacaiOpenApiRequest, Class<T> clazz) {
+        return doInvoke(wacaiOpenApiRequest, clazz);
+    }
+
+    private <T> T doInvoke(WacaiOpenApiRequest wacaiOpenApiRequest, Type type) {
 
         Request request = assemblyRequest(wacaiOpenApiRequest);
         try (Response response = client.newCall(request).execute()) {
@@ -113,13 +123,13 @@ public class WacaiOpenApiClient {
 
                     log.info("Access token invalid or expired, apply new one instead.");
                     accessTokenClient.setForceCacheInvalid(true);
-                    return invoke(wacaiOpenApiRequest, typeReference);
+                    return doInvoke(wacaiOpenApiRequest, type);
                 }
                 throw new WacaiOpenApiResponseException(wacaiErrorResponse);
             }
 
             String responseBodyString = body.string();
-            return JSON.parseObject(responseBodyString, typeReference);
+            return JSON.parseObject(responseBodyString, type);
         } catch (IOException e) {
             log.error("failed to execute {}", request, e);
 
@@ -132,8 +142,20 @@ public class WacaiOpenApiClient {
     }
 
     public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
-                           final TypeReference<T> typeReference,
+                             final TypeReference<T> typeReference,
+                             final WacaiOpenApiResponseCallback<T> callback) {
+        doInvoke(wacaiOpenApiRequest, typeReference.getType(), callback);
+    }
+
+    public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
+                           final Class<T> clazz,
                            final WacaiOpenApiResponseCallback<T> callback) {
+        doInvoke(wacaiOpenApiRequest, clazz, callback);
+    }
+
+    private <T> void doInvoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
+                             final Type type,
+                             final WacaiOpenApiResponseCallback<T> callback) {
         Request request = assemblyRequest(wacaiOpenApiRequest);
 
         client.newCall(request).enqueue(new Callback() {
@@ -159,7 +181,7 @@ public class WacaiOpenApiClient {
 
                         log.info("Access token invalid or expired, apply new one instead.");
                         accessTokenClient.setForceCacheInvalid(true);
-                        invoke(wacaiOpenApiRequest, typeReference, callback);
+                        doInvoke(wacaiOpenApiRequest, type, callback);
                     } else {
                         callback.onFailure(new WacaiOpenApiResponseException(wacaiErrorResponse));
                     }
@@ -170,7 +192,7 @@ public class WacaiOpenApiClient {
                     return;
                 }
 
-                callback.onSuccess(JSON.parseObject(responseBodyString, typeReference));
+                callback.onSuccess(JSON.parseObject(responseBodyString, type));
             }
         });
     }
@@ -178,7 +200,7 @@ public class WacaiOpenApiClient {
     private Request assemblyRequest(WacaiOpenApiRequest wacaiOpenApiRequest) {
 
         if (!initFlag.get()) {
-            throw new IllegalStateException("Not initial client, please call init method before invoke");
+            throw new IllegalStateException("Not initial client, please call init method before doInvoke");
         }
 
         byte[] bodyBytes = assemblyRequestBody(wacaiOpenApiRequest);
