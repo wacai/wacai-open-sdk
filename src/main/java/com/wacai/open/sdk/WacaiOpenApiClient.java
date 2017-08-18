@@ -71,7 +71,7 @@ public class WacaiOpenApiClient {
         this.appSecret = appSecret;
     }
 
-    void init() {
+    public void init() {
 
         if (!initFlag.compareAndSet(false, true)) {
             throw new IllegalStateException("init state");
@@ -97,11 +97,11 @@ public class WacaiOpenApiClient {
         return wacaiOpenApiClient;
     }
 
-    public <T> T Invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
+    public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
         return doInvoke(wacaiOpenApiRequest, typeReference.getType());
     }
 
-    public <T> T Invoke(WacaiOpenApiRequest wacaiOpenApiRequest, Class<T> clazz) {
+    public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, Class<T> clazz) {
         return doInvoke(wacaiOpenApiRequest, clazz);
     }
 
