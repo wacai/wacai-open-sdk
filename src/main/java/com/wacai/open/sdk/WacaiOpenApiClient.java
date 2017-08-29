@@ -128,13 +128,19 @@ public class WacaiOpenApiClient {
                 throw new WacaiOpenApiResponseException(wacaiErrorResponse);
             }
 
-            String responseBodyString = body.string();
-            return JSON.parseObject(responseBodyString, type);
+            return deserialization(body.string(), type);
         } catch (IOException e) {
             log.error("failed to execute {}", request, e);
 
             throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
         }
+    }
+
+    private <T> T deserialization(String json, Type type) throws IOException {
+        if (String.class.equals(type)) {
+            return (T)json;
+        }
+        return JSON.parseObject(json, type);
     }
 
     private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
@@ -192,7 +198,7 @@ public class WacaiOpenApiClient {
                     return;
                 }
 
-                callback.onSuccess(JSON.parseObject(responseBodyString, type));
+                callback.onSuccess(deserialization(responseBodyString, type));
             }
         });
     }

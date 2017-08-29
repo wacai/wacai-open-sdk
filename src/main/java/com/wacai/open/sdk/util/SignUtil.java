@@ -105,9 +105,7 @@ public final class SignUtil {
             && !httpServletRequest.getHeader("content-type").contains("multipart/form-data")) {
             // POST 并且非 form 表单
             ServletInputStream inputStream = httpServletRequest.getInputStream();
-            if (inputStream.available() > 0) {
-                bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(inputStream));
-            }
+            bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(inputStream));
         }
 
         Map<String, String> headers = resolveHeaders(httpServletRequest);
