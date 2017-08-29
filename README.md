@@ -7,7 +7,7 @@
    <groupId>com.wacai</groupId>
    <artifactId>wacai-open-sdk</artifactId>
    <version>1.0.0-SNAPSHOT</version>
-</depenency>
+</dependency>
 ```
 #### 核心功能
 - 封装和授权系统的[交互逻辑](doc/api_auth.md)
