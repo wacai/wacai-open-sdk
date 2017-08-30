@@ -140,9 +140,10 @@ public class WacaiOpenApiClient {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private <T> T deserialization(String json, Type type) throws IOException {
         if (String.class.equals(type)) {
-            return (T)json;
+            return (T) json;
         }
         return JSON.parseObject(json, type);
     }
