@@ -43,8 +43,7 @@ import static java.util.stream.Collectors.joining;
 @Slf4j
 public class WacaiOpenApiClient {
 
-    private static final MediaType JSON_MEDIA_TYPE
-        = MediaType.parse("application/json; charset=utf-8");
+    private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json; charset=utf-8");
 
     private static final List<String> SIGN_HEADERS = Arrays.asList(X_WAC_VERSION, X_WAC_TIMESTAMP,
                                                                    X_WAC_ACCESS_TOKEN);
@@ -116,8 +115,13 @@ public class WacaiOpenApiClient {
                 }
 
                 String responseBodyString = body.string();
-                WacaiErrorResponse wacaiErrorResponse =
-                    JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                WacaiErrorResponse wacaiErrorResponse;
+                try {
+                    wacaiErrorResponse = JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                } catch (Exception e) {
+                    log.error("failed to deserialization {}", responseBodyString, e);
+                    throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+                }
                 if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
                     || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
 
@@ -160,8 +164,8 @@ public class WacaiOpenApiClient {
     }
 
     private <T> void doInvoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
-                             final Type type,
-                             final WacaiOpenApiResponseCallback<T> callback) {
+                              final Type type,
+                              final WacaiOpenApiResponseCallback<T> callback) {
         Request request = assemblyRequest(wacaiOpenApiRequest);
 
         client.newCall(request).enqueue(new Callback() {
@@ -180,8 +184,14 @@ public class WacaiOpenApiClient {
 
                 String responseBodyString = body.string();
                 if (response.code() == 400) {
-                    WacaiErrorResponse wacaiErrorResponse =
-                        JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                    WacaiErrorResponse wacaiErrorResponse;
+                    try {
+                        wacaiErrorResponse = JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                    } catch (Exception e) {
+                        log.error("failed to deserialization {}", responseBodyString, e);
+                        callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+                        return;
+                    }
                     if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
                         || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
 
