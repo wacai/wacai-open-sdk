@@ -31,4 +31,22 @@ public class WacaiOpenApiResponseException extends RuntimeException {
     public WacaiOpenApiResponseException(ErrorCode errorCode, Throwable throwable) {
         this(errorCode.getCode(), errorCode.getDescription(), throwable);
     }
+
+    /**
+     * 是否系统异常
+     *
+     * @return {@code true} 如果是系统异常
+     */
+    public boolean isSystem() {
+        return ErrorCode.SYSTEM_ERROR.getCode() == code;
+    }
+
+    /**
+     * 是否业务异常
+     *
+     * @return {@code true} 如果是业务异常
+     */
+    public boolean isBiz() {
+        return !isSystem();
+    }
 }
