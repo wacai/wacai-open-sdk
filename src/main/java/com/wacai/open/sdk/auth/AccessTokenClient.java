@@ -3,6 +3,7 @@ package com.wacai.open.sdk.auth;
 import com.alibaba.fastjson.JSON;
 import com.wacai.open.sdk.errorcode.ErrorCode;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
+import com.wacai.open.sdk.json.JsonTool;
 import com.wacai.open.sdk.response.AccessToken;
 import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.util.SignUtil;
@@ -112,13 +113,13 @@ public class AccessTokenClient {
             }
             if (response.code() == 400) {
                 WacaiErrorResponse wacaiErrorResponse =
-                    JSON.parseObject(responseBody.string(), WacaiErrorResponse.class);
+                    JsonTool.deserialization(responseBody.string(), WacaiErrorResponse.class);
                 throw new WacaiOpenApiResponseException(wacaiErrorResponse);
             } else if (response.code() != 200) {
                 throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
             }
 
-            return JSON.parseObject(responseBody.string(), AccessToken.class);
+            return JsonTool.deserialization(responseBody.string(), AccessToken.class);
         } catch (IOException e) {
             throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
         }

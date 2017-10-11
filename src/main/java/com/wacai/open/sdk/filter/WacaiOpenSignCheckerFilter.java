@@ -1,7 +1,7 @@
 package com.wacai.open.sdk.filter;
 
-import com.alibaba.fastjson.JSON;
 import com.wacai.open.sdk.errorcode.ErrorCode;
+import com.wacai.open.sdk.json.JsonTool;
 import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.util.SignUtil;
 
@@ -76,7 +76,7 @@ public class WacaiOpenSignCheckerFilter implements Filter {
         wacaiErrorResponse.setCode(ErrorCode.SIGN_NOT_MATCH.getCode());
         wacaiErrorResponse.setError(ErrorCode.SIGN_NOT_MATCH.getDescription());
 
-        httpServletResponse.getOutputStream().write(JSON.toJSONBytes(wacaiErrorResponse));
+        httpServletResponse.getOutputStream().write(JsonTool.serialization(wacaiErrorResponse));
         httpServletResponse.flushBuffer();
     }
 

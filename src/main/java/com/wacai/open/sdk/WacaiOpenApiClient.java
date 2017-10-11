@@ -1,10 +1,10 @@
 package com.wacai.open.sdk;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
 import com.wacai.open.sdk.auth.AccessTokenClient;
 import com.wacai.open.sdk.errorcode.ErrorCode;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
+import com.wacai.open.sdk.json.*;
 import com.wacai.open.sdk.request.WacaiOpenApiRequest;
 import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.response.WacaiOpenApiResponseCallback;
@@ -65,6 +65,12 @@ public class WacaiOpenApiClient {
     @Setter
     private String gatewayAuthUrl = "https://open.wacai.com/gw/auth";
 
+    /**
+     * json默认处理类
+     */
+    @Setter
+    private String jsonProc = JsonConst.FASTJSON_KEY;
+
     public WacaiOpenApiClient(String appKey, String appSecret) {
         this.appKey = appKey;
         this.appSecret = appSecret;
@@ -88,12 +94,28 @@ public class WacaiOpenApiClient {
         if (client == null) {
             this.client = new OkHttpClient();
         }
+        try {
+            Object jsonProInstance = Class.forName(jsonProc).newInstance();
+            if (jsonProInstance instanceof JsonProcessor){
+                JsonConfig.getInstance().setDefaultProcessor((JsonProcessor) jsonProInstance);
+                JsonConfig.getInstance().init();
+            }else {
+                throw new RuntimeException("加载非json处理类");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static WacaiOpenApiClient init(String appKey, String appSecret) {
         WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient(appKey, appSecret);
         wacaiOpenApiClient.init();
         return wacaiOpenApiClient;
+    }
+
+    @Deprecated
+    public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, com.alibaba.fastjson.TypeReference<T> typeReference) {
+        return doInvoke(wacaiOpenApiRequest, typeReference.getType());
     }
 
     public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
@@ -117,7 +139,7 @@ public class WacaiOpenApiClient {
                 String responseBodyString = body.string();
                 WacaiErrorResponse wacaiErrorResponse;
                 try {
-                    wacaiErrorResponse = JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                    wacaiErrorResponse = JsonTool.deserialization(responseBodyString, WacaiErrorResponse.class);
                 } catch (Exception e) {
                     log.error("failed to deserialization {}", responseBodyString, e);
                     throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
@@ -145,11 +167,11 @@ public class WacaiOpenApiClient {
         if (String.class.equals(type)) {
             return (T) json;
         }
-        return JSON.parseObject(json, type);
+        return JsonTool.deserialization(json, type);
     }
 
     private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
-        return JSON.toJSONBytes(wacaiOpenApiRequest.getBizParam());
+        return JsonTool.serialization(wacaiOpenApiRequest.getBizParam());
     }
 
     public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
@@ -187,7 +209,7 @@ public class WacaiOpenApiClient {
                 if (response.code() == 400) {
                     WacaiErrorResponse wacaiErrorResponse;
                     try {
-                        wacaiErrorResponse = JSON.parseObject(responseBodyString, WacaiErrorResponse.class);
+                        wacaiErrorResponse = JsonTool.deserialization(responseBodyString, WacaiErrorResponse.class);
                     } catch (Exception e) {
                         log.error("failed to deserialization {}", responseBodyString, e);
                         callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
