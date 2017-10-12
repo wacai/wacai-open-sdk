@@ -1,6 +1,7 @@
 package com.wacai.open.sdk.json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -14,6 +15,9 @@ import java.util.Map;
 public class JackJsonProcessor implements JsonProcessor {
 
     private ObjectMapper objMapper = new ObjectMapper();
+    public JackJsonProcessor(){
+        objMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
     @Override
     public <T> T deserialization(String json, Type type) {
 

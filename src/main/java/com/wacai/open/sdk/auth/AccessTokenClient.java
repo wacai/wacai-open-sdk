@@ -1,6 +1,5 @@
 package com.wacai.open.sdk.auth;
 
-import com.alibaba.fastjson.JSON;
 import com.wacai.open.sdk.errorcode.ErrorCode;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
 import com.wacai.open.sdk.json.JsonTool;
@@ -10,6 +9,7 @@ import com.wacai.open.sdk.util.SignUtil;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -118,10 +118,18 @@ public class AccessTokenClient {
             } else if (response.code() != 200) {
                 throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
             }
-
-            return JsonTool.deserialization(responseBody.string(), AccessToken.class);
+            Map tokenMap = JsonTool.deserialization(responseBody.string(), Map.class);
+            return tokenTransfer(tokenMap);
         } catch (IOException e) {
             throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
         }
+    }
+    private AccessToken tokenTransfer(Map mapParam){
+        AccessToken token = new AccessToken();
+        token.setAccessToken(String.valueOf(mapParam.get("access_token")));
+        token.setTokenType(String.valueOf(mapParam.get("token_type")));
+        token.setExpires(Integer.valueOf(String.valueOf( mapParam.get("expires_in"))));
+        token.setRefreshToken(String.valueOf(mapParam.get("refresh_token")));
+        return token;
     }
 }

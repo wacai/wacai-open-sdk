@@ -1,6 +1,5 @@
 package com.wacai.open.sdk;
 
-import com.alibaba.fastjson.JSON;
 import com.wacai.open.sdk.auth.AccessTokenClient;
 import com.wacai.open.sdk.errorcode.ErrorCode;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
@@ -9,7 +8,9 @@ import com.wacai.open.sdk.request.WacaiOpenApiRequest;
 import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.response.WacaiOpenApiResponseCallback;
 import com.wacai.open.sdk.util.SignUtil;
-
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import okhttp3.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 
@@ -21,23 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Headers;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-
-import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_ACCESS_TOKEN;
-import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SDK_VERSION;
-import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
-import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TIMESTAMP;
-import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_VERSION;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.*;
 import static java.util.stream.Collectors.joining;
 
 @Slf4j
@@ -111,11 +96,6 @@ public class WacaiOpenApiClient {
         WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient(appKey, appSecret);
         wacaiOpenApiClient.init();
         return wacaiOpenApiClient;
-    }
-
-    @Deprecated
-    public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, com.alibaba.fastjson.TypeReference<T> typeReference) {
-        return doInvoke(wacaiOpenApiRequest, typeReference.getType());
     }
 
     public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
