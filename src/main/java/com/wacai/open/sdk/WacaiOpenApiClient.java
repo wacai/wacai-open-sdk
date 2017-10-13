@@ -50,11 +50,8 @@ public class WacaiOpenApiClient {
     @Setter
     private String gatewayAuthUrl = "https://open.wacai.com/gw/auth";
 
-    /**
-     * json默认处理类
-     */
     @Setter
-    private String jsonProc = JsonConst.FASTJSON_KEY;
+    private JsonProcessor processor;
 
     public WacaiOpenApiClient(String appKey, String appSecret) {
         this.appKey = appKey;
@@ -79,17 +76,20 @@ public class WacaiOpenApiClient {
         if (client == null) {
             this.client = new OkHttpClient();
         }
-        try {
-            Object jsonProInstance = Class.forName(jsonProc).newInstance();
-            if (jsonProInstance instanceof JsonProcessor){
-                JsonConfig.getInstance().setDefaultProcessor((JsonProcessor) jsonProInstance);
-                JsonConfig.getInstance().init();
-            }else {
-                throw new RuntimeException("加载非json处理类");
+        if (processor == null) {
+            try {
+                Class.forName("com.alibaba.fastjson.JSON");
+                processor = new FastJsonProcessor();
+            } catch (ClassNotFoundException e) {
+                try {
+                    processor = (JsonProcessor) Class.forName(JsonConst.JACKSON_KEY).newInstance();
+                } catch (Exception e1) {
+                    throw  new RuntimeException(e1);
+                }
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
+        JsonConfig.getInstance().setDefaultProcessor(processor);
+        JsonConfig.getInstance().init();
     }
 
     public static WacaiOpenApiClient init(String appKey, String appSecret) {

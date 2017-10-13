@@ -2,18 +2,10 @@
 
 #### 概述
 - sdk默认使用fastjson作为json处理类
-- sdk提供fastjson和jackson两种选择,同时提供自定义扩展
-- 选择一种依赖可以排除其它相关依赖,详见依赖选择与排除
+- sdk提供fastjson和jackson两种选择，同时提供自定义扩展
+- 选择一种依赖可以排除其它相关依赖，详见依赖选择与排除
 
-#### 依赖GAV
-```xml
-<dependency>
-   <groupId>com.wacai</groupId>
-   <artifactId>wacai-open-sdk</artifactId>
-   <version>1.0.0-SNAPSHOT</version>
-</dependency>
-```
-##### 依赖选择与排除
+#### 依赖选择与排除
 ``` 
 1.选择fastjson
 <dependency>
@@ -50,21 +42,18 @@
 </dependency>
 
 ```
-####代码使用样例
+#### 代码使用样例
 ##### 默认json处理类
 ```java
 WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient(${appKey}, ${appSecret});
-wacaiOpenApiClient.setAppName("your spring.application.name here");
 wacaiOpenApiClient.init();
 
 WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.order.delete", "v2");
 wacaiOpenApiRequest.putBizParam("card_id", "34121141242144");
 wacaiOpenApiRequest.putBizParam("apply_money", 10);   
-```
-```
-wacaiOpenApiClient.setJsonProc("自定义json处理类的类路径")
-不设置将使用fastjson作为默认处理类
- 
+
+// 不设置将首先使用fastjson作为默认处理类
+
 ```
 #### 扩展
 ##### 自定义json处理类
@@ -101,8 +90,7 @@ public class FastJsonProcessor implements JsonProcessor {
 ##### 使用自定义json处理类
 ```java
 WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient(${appKey}, ${appSecret});
-wacaiOpenApiClient.setAppName("your spring.application.name here");
-wacaiOpenApiClient.setJsonProc("自定义json处理类的类路径");
+wacaiOpenApiClient.setProcessor("自定义json处理类");
 wacaiOpenApiClient.init();
 
 WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.order.delete", "v2");
