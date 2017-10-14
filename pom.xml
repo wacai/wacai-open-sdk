@@ -6,7 +6,7 @@
 
     <groupId>com.wacai</groupId>
     <artifactId>wacai-open-sdk</artifactId>
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.2.0</version>
     <name>wacai-open-sdk</name>
 
     <properties>
