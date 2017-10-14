@@ -6,8 +6,9 @@
 - 选择一种依赖可以排除其它相关依赖，详见依赖选择与排除
 
 #### 依赖选择与排除
-``` 
-1.选择fastjson
+
+- 选择fastjson
+```xml
 <dependency>
    <groupId>com.wacai</groupId>
    <artifactId>wacai-open-sdk</artifactId>
@@ -17,18 +18,20 @@
         <groupId>com.fasterxml.jackson.core</groupId>
          <artifactId>jackson-core</artifactId>
       </exclusion>
-      exclusion>
+      <exclusion>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
       </exclusion>
-      exclusion>
+      <exclusion>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-annotations</artifactId>
       </exclusion>
    </exclusions>
 </dependency>
+```
 
-2.选择jackson
+- 选择jackson
+```xml
 <dependency>
    <groupId>com.wacai</groupId>
    <artifactId>wacai-open-sdk</artifactId>
@@ -40,10 +43,10 @@
       </exclusion>
    </exclusions>
 </dependency>
-
 ```
 #### 代码使用样例
 ##### 默认json处理类
+- 默认使用fastjson，如果没有fastjson相关jar包，尝试使用jackson
 ```java
 WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient(${appKey}, ${appSecret});
 wacaiOpenApiClient.init();
@@ -51,8 +54,6 @@ wacaiOpenApiClient.init();
 WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.order.delete", "v2");
 wacaiOpenApiRequest.putBizParam("card_id", "34121141242144");
 wacaiOpenApiRequest.putBizParam("apply_money", 10);   
-
-// 不设置将首先使用fastjson作为默认处理类
 
 ```
 #### 扩展
