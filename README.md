@@ -6,7 +6,7 @@
 <dependency>
    <groupId>com.wacai</groupId>
    <artifactId>wacai-open-sdk</artifactId>
-   <version>1.0.0-SNAPSHOT</version>
+   <version>${version}</version>
 </dependency>
 ```
 #### 核心功能
