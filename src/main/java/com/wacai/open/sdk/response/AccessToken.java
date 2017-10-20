@@ -1,10 +1,12 @@
 package com.wacai.open.sdk.response;
 
 
+import java.io.Serializable;
+
 import lombok.Data;
 
 @Data
-public class AccessToken {
+public class AccessToken implements Serializable {
 
     private String accessToken;
 

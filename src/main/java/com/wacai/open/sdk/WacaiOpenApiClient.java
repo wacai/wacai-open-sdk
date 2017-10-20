@@ -73,6 +73,7 @@ public class WacaiOpenApiClient {
         }
         this.accessTokenClient = new AccessTokenClient(appKey, appSecret);
         this.accessTokenClient.setGatewayAuthUrl(gatewayAuthUrl);
+        this.accessTokenClient.init();
         if (client == null) {
             this.client = new OkHttpClient();
         }
