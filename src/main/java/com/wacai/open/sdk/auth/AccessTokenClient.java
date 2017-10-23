@@ -88,7 +88,10 @@ public class AccessTokenClient {
                         log.error("token error:",e);
                         dto = cachedAccessToken();
                     }
-                }else {//文件不存在
+                }else {
+                    if (accessTokenExpireDate.getTime() < System.currentTimeMillis()) {
+                        forceCacheInvalid = true;
+                    }
                     dto = cachedAccessToken();
                 }
                 FileUtils.objWrite(fileName,dto);
