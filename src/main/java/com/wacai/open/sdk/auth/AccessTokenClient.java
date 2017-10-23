@@ -89,7 +89,7 @@ public class AccessTokenClient {
                         dto = cachedAccessToken();
                     }
                 }else {
-                    if (accessTokenExpireDate.getTime() < System.currentTimeMillis()) {
+                    if (exists && accessTokenExpireDate.getTime() < System.currentTimeMillis()) {//文件存在&&过期
                         forceCacheInvalid = true;
                     }
                     dto = cachedAccessToken();
