@@ -60,13 +60,13 @@ public class AccessTokenClient {
 
     private static ScheduledExecutorService checkThread = Executors.newSingleThreadScheduledExecutor();
 
-    private static String cachDir = System.getProperty("user.home", File.separator + "/tmp") + File.separator + ".wacaiSdk" + File.separator + "caches";
+    private static String cacheDir = System.getProperty("user.home", File.separator + "tmp") + File.separator + ".wacaiSdk" + File.separator + "caches";
 
     public synchronized void init(){
         Runnable task = () -> {
             try {
 
-                String fileName = cachDir+File.separator+Base64.encodeBase64URLSafeString(DigestUtils.md5(appKey+"_"+appSecret));
+                String fileName = cacheDir+File.separator+Base64.encodeBase64URLSafeString(DigestUtils.md5(appKey+"_"+appSecret));
                 boolean exists = FileUtils.fileExists(fileName);
                 AccessTokenDto dto;
                 if (exists && accessTokenCached == null) {//需要文件操作场景
@@ -77,7 +77,6 @@ public class AccessTokenClient {
                             if (tokenFile.getAccessTokenExpireDate().getTime() > System.currentTimeMillis() && !forceCacheInvalid) {//不刷新场景
                                 accessTokenCached = tokenFile.getToken();
                                 accessTokenExpireDate = tokenFile.getAccessTokenExpireDate();
-                                forceCacheInvalid = tokenFile.isForceCacheInvalid();
                                 return;
                             }else {//文件token失效
                                 throw new RuntimeException("token失效");
@@ -86,11 +85,11 @@ public class AccessTokenClient {
                             throw new RuntimeException("token文件无有效信息");
                         }
                     } catch (Exception e) {//统一处理token无效情况
-                        log.error("token eror:",e);
-                        dto = CachedAccessToken();
+                        log.error("token error:",e);
+                        dto = cachedAccessToken();
                     }
                 }else {//文件不存在
-                    dto = CachedAccessToken();
+                    dto = cachedAccessToken();
                 }
                 FileUtils.objWrite(fileName,dto);
                 log.info("schedule refresh token:{}",dto);
@@ -102,25 +101,10 @@ public class AccessTokenClient {
     }
 
     public String getCachedAccessToken() {
-        if (accessTokenCached == null || forceCacheInvalid) {
-            synchronized (this) {
-                if (accessTokenCached == null) {
-                    accessTokenCached = applyAccessToken();
-                    forceCacheInvalid = false;
-                } else if (accessTokenExpireDate.getTime() > System.currentTimeMillis() && !forceCacheInvalid) {
-                    return accessTokenCached.getAccessToken();
-                } else {
-                    accessTokenCached = refreshAccessToken();
-                    forceCacheInvalid = false;
-                }
-                accessTokenExpireDate = new Date(System.currentTimeMillis()
-                                                 + accessTokenCached.getExpires() * 1000);
-            }
-        }
-        return accessTokenCached.getAccessToken();
+       return cachedAccessToken().getToken().getAccessToken();
     }
 
-    private AccessTokenDto CachedAccessToken() {
+    private AccessTokenDto cachedAccessToken() {
         if (accessTokenCached == null || forceCacheInvalid) {
             synchronized (this) {
                 if (accessTokenCached == null) {
