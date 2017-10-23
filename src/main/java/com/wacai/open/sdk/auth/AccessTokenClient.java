@@ -63,6 +63,7 @@ public class AccessTokenClient {
     private static String cacheDir = System.getProperty("user.home", File.separator + "tmp") + File.separator + ".wacaiSdk" + File.separator + "caches";
 
     public synchronized void init(){
+        FileUtils.mkdirsIfNecessary(cacheDir);
         Runnable task = () -> {
             try {
 
