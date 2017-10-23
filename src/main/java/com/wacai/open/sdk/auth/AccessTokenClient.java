@@ -88,8 +88,8 @@ public class AccessTokenClient {
                         log.error("token error:",e);
                         dto = cachedAccessToken();
                     }
-                }else {
-                    if (exists && accessTokenExpireDate.getTime() < System.currentTimeMillis()) {//文件存在&&过期
+                }else {//文件不存在 || 文件存在且过期
+                    if (exists && accessTokenExpireDate.getTime() < System.currentTimeMillis() + 400000) {//文件存在&&过期
                         forceCacheInvalid = true;
                     }
                     dto = cachedAccessToken();
