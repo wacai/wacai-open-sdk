@@ -4,8 +4,8 @@ import org.junit.Test;
 
 public class SignUtilTest {
 
-    @Test
-    public void test_generateStringRecursively() {
+  @Test
+  public void test_generateStringRecursively() {
 
-    }
+  }
 }

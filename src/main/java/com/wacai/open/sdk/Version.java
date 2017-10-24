@@ -6,30 +6,30 @@ import java.util.Properties;
 
 public final class Version {
 
-    private static final int PROTOCOL_VERSION;
+  private static final int PROTOCOL_VERSION;
 
-    private static final String SDK_VERSION;
+  private static final String SDK_VERSION;
 
-    public static int getProtocolVersion() {
-        return PROTOCOL_VERSION;
+  static {
+    InputStream sdkStream = Version.class.getClassLoader()
+        .getResourceAsStream("config/sdk.properties");
+
+    Properties properties = new Properties();
+    try {
+      properties.load(sdkStream);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
 
-    public static String getSdkVersion() {
-        return SDK_VERSION;
-    }
+    SDK_VERSION = properties.getProperty("sdk.version");
+    PROTOCOL_VERSION = Integer.parseInt(properties.getProperty("protocol.version"));
+  }
 
-    static {
-        InputStream sdkStream = Version.class.getClassLoader()
-            .getResourceAsStream("config/sdk.properties");
+  public static int getProtocolVersion() {
+    return PROTOCOL_VERSION;
+  }
 
-        Properties properties = new Properties();
-        try {
-            properties.load(sdkStream);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        SDK_VERSION = properties.getProperty("sdk.version");
-        PROTOCOL_VERSION = Integer.parseInt(properties.getProperty("protocol.version"));
-    }
+  public static String getSdkVersion() {
+    return SDK_VERSION;
+  }
 }
