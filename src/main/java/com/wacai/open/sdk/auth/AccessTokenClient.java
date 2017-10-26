@@ -139,14 +139,15 @@ public class AccessTokenClient {
 
   private AccessToken refreshAccessToken() {
     long timestamp = System.currentTimeMillis();
-    String sign = SignUtil.generateSign(appKey + "refresh_token"
-        + accessTokenCached.getRefreshToken() + timestamp, appSecret);
+    String refreshToken = accessTokenCached.getRefreshToken();
+    String sign = SignUtil.generateSign(appKey + "refresh_token" + refreshToken + timestamp,
+        appSecret);
 
     RequestBody body = new FormBody.Builder()
         .add("app_key", appKey)
         .add("grant_type", "refresh_token")
         .add("timestamp", String.valueOf(timestamp))
-        .add("refresh_token", accessTokenCached.getRefreshToken())
+        .add("refresh_token", refreshToken)
         .add("sign", sign).build();
 
     Request request = new Request.Builder().url(gatewayAuthUrl + "/refresh").post(body).build();
@@ -156,8 +157,7 @@ public class AccessTokenClient {
       if (e.getCode() == ErrorCode.INVALID_REFRESH_TOKEN.getCode()
           || e.getCode() == ErrorCode.REFRESH_TOKEN_EXPIRED.getCode()) {
 
-        log.info("Refresh token {} is invalid or expired, apply a new instead",
-            accessTokenCached.getRefreshToken());
+        log.info("Refresh token {} is invalid or expired, apply a new instead", refreshToken);
         return applyAccessToken();
       }
       throw e;
