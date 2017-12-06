@@ -3,9 +3,6 @@ package com.wacai.open.sdk;
 import com.wacai.open.sdk.auth.AccessTokenClient;
 import com.wacai.open.sdk.errorcode.ErrorCode;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
-import com.wacai.open.sdk.json.FastJsonProcessor;
-import com.wacai.open.sdk.json.JsonConfig;
-import com.wacai.open.sdk.json.JsonConst;
 import com.wacai.open.sdk.json.JsonProcessor;
 import com.wacai.open.sdk.json.JsonTool;
 import com.wacai.open.sdk.json.TypeReference;
@@ -103,20 +100,7 @@ public class WacaiOpenApiClient {
     if (client == null) {
       this.client = new OkHttpClient();
     }
-    if (processor == null) {
-      try {
-        Class.forName("com.alibaba.fastjson.JSON");
-        processor = new FastJsonProcessor();
-      } catch (ClassNotFoundException e) {
-        try {
-          processor = (JsonProcessor) Class.forName(JsonConst.JACKSON_KEY).newInstance();
-        } catch (Exception e1) {
-          throw new RuntimeException(e1);
-        }
-      }
-    }
-    JsonConfig.getInstance().setDefaultProcessor(processor);
-    JsonConfig.getInstance().init();
+   JsonTool.initJsonProcess(processor);
   }
 
   public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {

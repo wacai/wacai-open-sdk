@@ -2,6 +2,7 @@ package com.wacai.open.sdk.auth;
 
 import com.wacai.open.sdk.errorcode.ErrorCode;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
+import com.wacai.open.sdk.json.JsonProcessor;
 import com.wacai.open.sdk.json.JsonTool;
 import com.wacai.open.sdk.response.AccessToken;
 import com.wacai.open.sdk.response.AccessTokenDto;
@@ -57,6 +58,9 @@ public class AccessTokenClient {
   @Setter
   private volatile boolean forceCacheInvalid = false;
 
+  @Setter
+  private JsonProcessor processor;
+
 
   public synchronized void init() {
     FileUtils.mkdirsIfNecessary(cacheDir);
@@ -101,6 +105,9 @@ public class AccessTokenClient {
       }
     };
     checkThread.scheduleAtFixedRate(task, 0, 5, TimeUnit.MINUTES);
+
+    //初始化json处理类
+    JsonTool.initJsonProcess(processor);
   }
 
   public String getCachedAccessToken() {

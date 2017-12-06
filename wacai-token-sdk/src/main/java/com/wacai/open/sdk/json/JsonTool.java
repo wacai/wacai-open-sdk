@@ -28,4 +28,31 @@ public class JsonTool {
     JsonProcessor defaultProc = config.getDefaultProc();
     return defaultProc.objToStr(obj);
   }
+
+  public static void initJsonProcess(JsonProcessor processor){
+    //json处理类初始化标记
+    boolean jsonNeedInitFlag = false;
+    try {
+      JsonConfig.getInstance().getDefaultProc();
+    } catch (Exception e) {
+      jsonNeedInitFlag = true;
+    }
+    //没有设置json处理类 &&其它地方也没有初始化
+    if (processor == null&&jsonNeedInitFlag) {
+      try {
+        Class.forName("com.alibaba.fastjson.JSON");
+        processor = new FastJsonProcessor();
+      }
+      catch (ClassNotFoundException e) {
+        try {
+          processor = (JsonProcessor) Class.forName(JsonConst.JACKSON_KEY).newInstance();
+        }
+        catch (Exception e1) {
+          throw new RuntimeException(e1);
+        }
+      }
+    }
+    JsonConfig.getInstance().setDefaultProcessor(processor);
+    JsonConfig.getInstance().init();
+  }
 }
