@@ -1,11 +1,11 @@
-### wacai-open-sdk是用来跟API网关交互的sdk
+### wacai-openAllInOne-sdk是用来跟API网关交互的sdk
 
 #### 依赖GAV
 **依赖并未提交到maven中央仓库，建议使用者clone代码修改之后deploy到自己公司的私服**
 ```xml
 <dependency>
    <groupId>com.wacai</groupId>
-   <artifactId>wacai-open-sdk</artifactId>
+   <artifactId>wacai-openAllInOne-sdk</artifactId>
    <version>${version}</version>
 </dependency>
 ```
@@ -16,6 +16,7 @@
 - 封装参数[签名](doc/api_sign.md)逻辑
 - 提供同步和异步回调实现，方便适应不同的编程模式
 - 被调用时的参数[请求签名校验](doc/request_sign.md)
+- 提供[token服务sdk](doc/token_api.md)
 
 
 #### 核心依赖
