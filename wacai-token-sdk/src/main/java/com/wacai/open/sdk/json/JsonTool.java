@@ -30,6 +30,10 @@ public class JsonTool {
   }
 
   public static void initJsonProcess(JsonProcessor processor){
+    //显示指定json处理类优先级最高,支持覆盖
+    if (processor != null) {
+      JsonConfig.getInstance().setDefaultProcessor(processor);
+    }
     //json处理类初始化标记
     boolean jsonNeedInitFlag = false;
     try {
@@ -52,7 +56,9 @@ public class JsonTool {
         }
       }
     }
-    JsonConfig.getInstance().setDefaultProcessor(processor);
+    if (jsonNeedInitFlag) {
+      JsonConfig.getInstance().setDefaultProcessor(processor);
+    }
     JsonConfig.getInstance().init();
   }
 }
