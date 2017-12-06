@@ -11,8 +11,8 @@
 ```xml
 <dependency>
    <groupId>com.wacai</groupId>
-   <artifactId>wacai-open-sdk</artifactId>
-   <version>1.0.0-SNAPSHOT</version>
+   <artifactId>wacai-openAllInOne-sdk</artifactId>
+   <version>${version}</version>
    <exclusions>
      <exclusion>
         <groupId>com.fasterxml.jackson.core</groupId>
@@ -34,8 +34,8 @@
 ```xml
 <dependency>
    <groupId>com.wacai</groupId>
-   <artifactId>wacai-open-sdk</artifactId>
-   <version>1.0.0-SNAPSHOT</version>
+   <artifactId>wacai-openAllInOne-sdk</artifactId>
+   <version>${version}</version>
    <exclusions>
      <exclusion>
         <groupId>com.alibaba</groupId>
