@@ -16,6 +16,8 @@ public class WacaiOpenApiRequest {
 
   private Map<String, Object> bizParam = new HashMap<>();
 
+  private byte[] byteBuffer;
+
   public void putBizParam(String paramName, Object paramValue) {
     bizParam.put(paramName, paramValue);
   }
