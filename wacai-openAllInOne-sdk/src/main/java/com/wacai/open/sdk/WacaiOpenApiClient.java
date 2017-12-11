@@ -165,6 +165,8 @@ public class WacaiOpenApiClient {
       log.error("failed to execute {}", request, e);
 
       throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
+    }catch (ClassCastException e){
+      throw new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE, e);
     }
   }
 
@@ -249,7 +251,16 @@ public class WacaiOpenApiClient {
         if (isNeedDecode(response)) {
           callback.onSuccess(deserialization(body.string(), type));
         }else {
-          callback.onSuccess((T) body.bytes());
+          T bytes;
+          try {
+            bytes = (T) body.bytes();
+            callback.onSuccess(bytes);
+          } catch (IOException e) {
+            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+          }catch (ClassCastException e){
+            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE));
+          }
+
         }
 
       }
