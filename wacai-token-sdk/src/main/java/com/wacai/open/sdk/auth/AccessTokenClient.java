@@ -22,6 +22,7 @@ import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -61,50 +62,60 @@ public class AccessTokenClient {
   @Setter
   private JsonProcessor processor;
 
+  private static ConcurrentHashMap<String,Runnable> scheduleTask = new ConcurrentHashMap<>();
 
   public synchronized void init() {
     FileUtils.mkdirsIfNecessary(cacheDir);
-    Runnable task = () -> {
-      try {
-
-        String fileName = cacheDir + File.separator + Base64
-            .encodeBase64URLSafeString(DigestUtils.md5(appKey + "_" + appSecret));
-        boolean exists = FileUtils.fileExists(fileName);
-        AccessTokenDto dto;
-        if (exists && accessTokenCached == null) {//需要文件操作场景
+    String taskKey = appKey + "_" + appSecret;
+    //类锁解决cas问题
+    synchronized (AccessTokenClient.class) {
+      Runnable oldTask = scheduleTask.get(taskKey);
+      if (oldTask == null) {
+        Runnable task = () -> {
           try {
-            Object obj = FileUtils.objRead(fileName);
-            if (null != obj) {
-              AccessTokenDto tokenFile = (AccessTokenDto) obj;
-              if (tokenFile.getAccessTokenExpireDate().getTime() > System.currentTimeMillis()
-                  && !forceCacheInvalid) {//不刷新场景
-                accessTokenCached = tokenFile.getToken();
-                accessTokenExpireDate = tokenFile.getAccessTokenExpireDate();
-                return;
-              } else {//文件token失效
-                throw new RuntimeException("token失效");
+
+            String fileName = cacheDir + File.separator + Base64
+                .encodeBase64URLSafeString(DigestUtils.md5(appKey + "_" + appSecret));
+            boolean exists = FileUtils.fileExists(fileName);
+            AccessTokenDto dto;
+            if (exists && accessTokenCached == null) {//需要文件操作场景
+              try {
+                Object obj = FileUtils.objRead(fileName);
+                if (null != obj) {
+                  AccessTokenDto tokenFile = (AccessTokenDto) obj;
+                  if (tokenFile.getAccessTokenExpireDate().getTime() > System.currentTimeMillis()
+                      && !forceCacheInvalid) {//不刷新场景
+                    accessTokenCached = tokenFile.getToken();
+                    accessTokenExpireDate = tokenFile.getAccessTokenExpireDate();
+                    return;
+                  } else {//文件token失效
+                    throw new RuntimeException("token失效");
+                  }
+                } else {//文件无有效信息
+                  throw new RuntimeException("token文件无有效信息");
+                }
+              } catch (Exception e) {//统一处理token无效情况
+                log.error("token error:", e);
+                dto = cachedAccessToken();
               }
-            } else {//文件无有效信息
-              throw new RuntimeException("token文件无有效信息");
+            } else {//文件不存在 || 文件存在且过期
+              if (exists
+                  && accessTokenExpireDate.getTime() < System.currentTimeMillis() + 400000) {//文件存在&&过期
+                forceCacheInvalid = true;
+              }
+              dto = cachedAccessToken();
             }
-          } catch (Exception e) {//统一处理token无效情况
-            log.error("token error:", e);
-            dto = cachedAccessToken();
+            FileUtils.objWrite(fileName, dto);
+            log.info("schedule refresh token:{}", dto);
+          } catch (Exception e) {
+            log.error("get access token error:", e);
           }
-        } else {//文件不存在 || 文件存在且过期
-          if (exists
-              && accessTokenExpireDate.getTime() < System.currentTimeMillis() + 400000) {//文件存在&&过期
-            forceCacheInvalid = true;
-          }
-          dto = cachedAccessToken();
-        }
-        FileUtils.objWrite(fileName, dto);
-        log.info("schedule refresh token:{}", dto);
-      } catch (Exception e) {
-        log.error("get access token error:", e);
+        };
+        checkThread.scheduleAtFixedRate(task, 0, 5, TimeUnit.MINUTES);
+        scheduleTask.put(taskKey, task);
       }
-    };
-    checkThread.scheduleAtFixedRate(task, 0, 5, TimeUnit.MINUTES);
+    }
+
 
     //初始化json处理类
     JsonTool.initJsonProcess(processor);
