@@ -18,4 +18,6 @@ public class WacaiOpenApiHeader {
   public static final String X_WAC_SDK_VERSION = "x-wac-sdk-version";
 
   public static final String X_WAC_DECODE = "x_wac_decode_flag";
+
+  public static final String X_WAC_TRACE_ID = "x_wac_trace_id";
 }

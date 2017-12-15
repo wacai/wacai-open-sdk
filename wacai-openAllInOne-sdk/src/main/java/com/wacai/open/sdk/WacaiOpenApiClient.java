@@ -39,6 +39,7 @@ import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_DECODE;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SDK_VERSION;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TIMESTAMP;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TRACE_ID;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_VERSION;
 import static java.util.stream.Collectors.joining;
 
@@ -122,12 +123,17 @@ public class WacaiOpenApiClient {
       return true;
     }
   }
+
+  private String parseTraceId(Response response){
+    return response.header(X_WAC_TRACE_ID);
+  }
   private <T> T doInvoke(WacaiOpenApiRequest wacaiOpenApiRequest, Type type) {
 
     Request request = assemblyRequest(wacaiOpenApiRequest);
     try (Response response = client.newCall(request).execute()) {
       ResponseBody body = response.body();
       if (response.code() != 200 || body == null) {
+        log.info("sdk error request log, traceId:{}, httpCode:{},httpBodyMsg:{} ",parseTraceId(response),  response.code(), body == null ? "null" : body.string());
         if (response.code() != 400 || body == null) {
           throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
         }
@@ -158,6 +164,9 @@ public class WacaiOpenApiClient {
         if (isNeedDecode(response)){
           return deserialization(body.string(), type);
         }else {
+          if (response.code() != 200) {
+            throw new WacaiOpenApiResponseException(response.code(),body == null ? "null" : body.string());
+          }
           return (T)body.bytes();
         }
 
@@ -239,10 +248,15 @@ public class WacaiOpenApiClient {
             } else {
               callback.onFailure(new WacaiOpenApiResponseException(wacaiErrorResponse));
             }
-          } else if (response.code() != 200) {
-            log.error("request {}, response code is {}", wacaiOpenApiRequest, response.code());
-
-            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+          }
+          //区分是否透传
+          else if (response.code() != 200) {
+            log.error("traceId {},request {}, response code is {}",parseTraceId(response), wacaiOpenApiRequest, response.code());
+            if (isNeedDecode(response)) {
+              callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+            }else {
+              callback.onFailure(new WacaiOpenApiResponseException(response.code(),body == null ? "null" : body.string()));
+            }
             return;
           }
 
