@@ -133,7 +133,7 @@ public class WacaiOpenApiClient {
     try (Response response = client.newCall(request).execute()) {
       ResponseBody body = response.body();
       if (response.code() != 200 || body == null) {
-        log.info("sdk error request log, traceId:{}, httpCode:{},httpBodyMsg:{} ",parseTraceId(response),  response.code(), body == null ? "null" : body.string());
+        log.info("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ",parseTraceId(response),wacaiOpenApiRequest.getApiName(),  response.code(), body == null ? "null" : body.string());
         if (response.code() != 400 || body == null) {
           throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
         }
@@ -251,7 +251,7 @@ public class WacaiOpenApiClient {
           }
           //区分是否透传
           else if (response.code() != 200) {
-            log.error("traceId {},request {}, response code is {}",parseTraceId(response), wacaiOpenApiRequest, response.code());
+            log.error("traceId {},api {},request {}, response code is {}",parseTraceId(response),wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest, response.code());
             if (isNeedDecode(response)) {
               callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
             }else {
