@@ -8,11 +8,11 @@
 - 交互的编码格式统一为UTF-8
 - HTTP正常响应的http code都是200，非正常返回400
 
-### 透传请求
-- 定义 http请求报文的body及请求返回的结果，开放网关不做任何解析处理，客户端与后端服务自行解析。
-- 使用场景 小文件上传(目前服务端限制4M) 自定义序列化协议。
-- 使用方法及注意事项  透传请求body通过byteBuffer设置传递信息,bizParam设置参数将被忽略,byte[]接收返回结果,通过异常判断是否调用成功。
-- java代码样例
+### 透传协议
+- 定义: http请求报文的body及请求返回的结果，开放网关不做任何解析处理，客户端与后端服务自行解析。
+- 使用场景: 小文件上传(目前服务端限制4M)、 自定义序列化协议。
+- 使用方法及注意事项:  透传请求body通过byteBuffer设置传递信息,bizParam设置参数将被忽略,byte[]接收返回结果,通过异常判断是否调用成功。
+- java代码样例:
 ```java
 WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient("${appKey}", "${appSecret}");
 wacaiOpenApiClient.init();
