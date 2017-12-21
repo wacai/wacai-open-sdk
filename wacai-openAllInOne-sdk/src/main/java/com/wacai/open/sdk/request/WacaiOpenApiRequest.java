@@ -1,5 +1,8 @@
 package com.wacai.open.sdk.request;
 
+import com.wacai.open.sdk.errorcode.ErrorCode;
+import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,5 +23,12 @@ public class WacaiOpenApiRequest {
 
   public void putBizParam(String paramName, Object paramValue) {
     bizParam.put(paramName, paramValue);
+  }
+
+  public void setByteBuffer(byte[] byteBuffer){
+    if (byteBuffer == null || byteBuffer.length == 0) {
+      throw new WacaiOpenApiResponseException(ErrorCode.ERROR_PARAM);
+    }
+    this.byteBuffer = byteBuffer;
   }
 }
