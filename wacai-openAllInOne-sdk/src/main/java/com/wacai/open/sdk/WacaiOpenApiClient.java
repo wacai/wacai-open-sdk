@@ -52,7 +52,7 @@ public class WacaiOpenApiClient {
   private static final MediaType OBJ_STREAM = MediaType.parse("application/octet-stream");
 
   private static final List<String> SIGN_HEADERS = Arrays.asList(X_WAC_VERSION, X_WAC_TIMESTAMP,
-      X_WAC_ACCESS_TOKEN);
+                                                                 X_WAC_ACCESS_TOKEN);
 
   private final String appKey;
 
@@ -104,7 +104,7 @@ public class WacaiOpenApiClient {
     if (client == null) {
       this.client = new OkHttpClient();
     }
-   JsonTool.initJsonProcess(processor);
+    JsonTool.initJsonProcess(processor);
   }
 
   public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
@@ -115,32 +115,35 @@ public class WacaiOpenApiClient {
     return doInvoke(wacaiOpenApiRequest, clazz);
   }
 
-  private boolean isNeedDecode(Response response){
+  private boolean isNeedDecode(Response response) {
     String decode = response.header(X_WAC_DECODE);
     if (decode != null) {
       return false;
-    }else {
+    } else {
       return true;
     }
   }
 
-  private String parseTraceId(Response response){
+  private String parseTraceId(Response response) {
     return response.header(X_WAC_TRACE_ID);
   }
+
   private <T> T doInvoke(WacaiOpenApiRequest wacaiOpenApiRequest, Type type) {
 
     Request request = assemblyRequest(wacaiOpenApiRequest);
     try (Response response = client.newCall(request).execute()) {
       ResponseBody body = response.body();
+      String bodyStr = body.string();
       if (response.code() != 200 || body == null) {
-        log.info("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ",parseTraceId(response),wacaiOpenApiRequest.getApiName(),  response.code(), body == null ? "null" : body.string());
+        log.info("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ", parseTraceId(response),
+                 wacaiOpenApiRequest.getApiName(), response.code(), body == null ? "null" : bodyStr);
         if (response.code() != 400 || body == null) {
           throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
         }
 
         //todo 透传请求不能反序列化
         if (isNeedDecode(response)) {
-          String responseBodyString = body.string();
+          String responseBodyString = bodyStr;
           WacaiErrorResponse wacaiErrorResponse;
           try {
             wacaiErrorResponse = JsonTool
@@ -159,23 +162,25 @@ public class WacaiOpenApiClient {
           throw new WacaiOpenApiResponseException(wacaiErrorResponse);
         }
 
-        }
+      }
 
-        if (isNeedDecode(response)){
-          return deserialization(body.string(), type);
-        }else {
-          if (response.code() != 200) {
-            throw new WacaiOpenApiResponseException(response.code(),body == null ? "null" : body.string());
-          }
-          return (T)body.bytes();
+      if (isNeedDecode(response)) {
+        return deserialization(bodyStr, type);
+      } else {
+        if (response.code() != 200) {
+          throw new WacaiOpenApiResponseException(response.code(), body == null ? "null" : bodyStr);
         }
+        return (T) body.bytes();
+      }
 
     } catch (IOException e) {
       log.error("failed to execute {}", request, e);
 
       throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
-    }catch (ClassCastException e){
+    } catch (ClassCastException e) {
       throw new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE, e);
+    } catch (Exception e) {
+      throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
     }
   }
 
@@ -188,26 +193,25 @@ public class WacaiOpenApiClient {
   }
 
 
-
   private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
     return JsonTool.serialization(wacaiOpenApiRequest.getBizParam());
   }
 
   public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
-      final TypeReference<T> typeReference,
-      final WacaiOpenApiResponseCallback<T> callback) {
+                         final TypeReference<T> typeReference,
+                         final WacaiOpenApiResponseCallback<T> callback) {
     doInvoke(wacaiOpenApiRequest, typeReference.getType(), callback);
   }
 
   public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
-      final Class<T> clazz,
-      final WacaiOpenApiResponseCallback<T> callback) {
+                         final Class<T> clazz,
+                         final WacaiOpenApiResponseCallback<T> callback) {
     doInvoke(wacaiOpenApiRequest, clazz, callback);
   }
 
   private <T> void doInvoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
-      final Type type,
-      final WacaiOpenApiResponseCallback<T> callback) {
+                            final Type type,
+                            final WacaiOpenApiResponseCallback<T> callback) {
     Request request = assemblyRequest(wacaiOpenApiRequest);
 
     client.newCall(request).enqueue(new Callback() {
@@ -223,11 +227,10 @@ public class WacaiOpenApiClient {
           callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
           return;
         }
-
+        String responseBodyString = body.string();
 
         if (response.code() == 400) {
           WacaiErrorResponse wacaiErrorResponse;
-          String responseBodyString = body.string();
           //非透传
           if (isNeedDecode(response)) {
 
@@ -251,11 +254,13 @@ public class WacaiOpenApiClient {
           }
           //区分是否透传
           else if (response.code() != 200) {
-            log.error("traceId {},api {},request {}, response code is {}",parseTraceId(response),wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest, response.code());
+            log.error("traceId {},api {},request {}, response code is {}", parseTraceId(response),
+                      wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest, response.code());
             if (isNeedDecode(response)) {
               callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
-            }else {
-              callback.onFailure(new WacaiOpenApiResponseException(response.code(),body == null ? "null" : body.string()));
+            } else {
+              callback.onFailure(
+                  new WacaiOpenApiResponseException(response.code(), body == null ? "null" : responseBodyString));
             }
             return;
           }
@@ -263,16 +268,18 @@ public class WacaiOpenApiClient {
         }
 
         if (isNeedDecode(response)) {
-          callback.onSuccess(deserialization(body.string(), type));
-        }else {
+          callback.onSuccess(deserialization(responseBodyString, type));
+        } else {
           T bytes;
           try {
             bytes = (T) body.bytes();
             callback.onSuccess(bytes);
           } catch (IOException e) {
             callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
-          }catch (ClassCastException e){
+          } catch (ClassCastException e) {
             callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE));
+          } catch (Exception e) {
+            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
           }
 
         }
@@ -306,19 +313,19 @@ public class WacaiOpenApiClient {
     headerMap.put(X_WAC_SDK_VERSION, Version.getSdkVersion());
 
     String signature = generateSignature(wacaiOpenApiRequest.getApiName(),
-        wacaiOpenApiRequest.getApiVersion(),
-        headerMap, bodyBytes);
+                                         wacaiOpenApiRequest.getApiVersion(),
+                                         headerMap, bodyBytes);
     headerMap.put(X_WAC_SIGNATURE, signature);
 
     String url = gatewayEntryUrl + "/" + wacaiOpenApiRequest.getApiName() + "/"
-        + wacaiOpenApiRequest.getApiVersion();
+                 + wacaiOpenApiRequest.getApiVersion();
     return new Request.Builder().url(url).headers(Headers.of(headerMap))
         .post(RequestBody.create(mediaType, bodyBytes))
         .build();
   }
 
   private String generateSignature(String apiName, String apiVersion,
-      Map<String, String> headerMap, byte[] bodyBytes) {
+                                   Map<String, String> headerMap, byte[] bodyBytes) {
 
     String headerString = headerMap.entrySet().stream()
         .filter(entry -> SIGN_HEADERS.contains(entry.getKey()))
