@@ -179,8 +179,6 @@ public class WacaiOpenApiClient {
       throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
     } catch (ClassCastException e) {
       throw new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE, e);
-    } catch (Exception e) {
-      throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
     }
   }
 
@@ -278,8 +276,6 @@ public class WacaiOpenApiClient {
             callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
           } catch (ClassCastException e) {
             callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE));
-          } catch (Exception e) {
-            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
           }
 
         }
