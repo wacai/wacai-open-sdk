@@ -7,9 +7,13 @@ import com.wacai.open.sdk.json.JsonProcessor;
 import com.wacai.open.sdk.json.JsonTool;
 import com.wacai.open.sdk.json.TypeReference;
 import com.wacai.open.sdk.request.WacaiOpenApiRequest;
+import com.wacai.open.sdk.response.FileGatewayRes;
+import com.wacai.open.sdk.response.RemoteFile;
 import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.response.WacaiOpenApiResponseCallback;
 import com.wacai.open.sdk.util.SignUtil;
+
+import com.alibaba.fastjson.JSON;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -28,6 +32,7 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Headers;
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -73,6 +78,14 @@ public class WacaiOpenApiClient {
 
   @Setter
   private JsonProcessor processor;
+
+  private int callCount = 0;
+
+  private final int maxCallCount = 3;
+
+  @Setter
+  private String fileGatewayEntryUrl = "http://file.wacai.info/upload/normal/const";
+
 
   public WacaiOpenApiClient(String appKey, String appSecret) {
     this.appKey = appKey;
@@ -192,7 +205,62 @@ public class WacaiOpenApiClient {
 
 
   private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
-    return JsonTool.serialization(wacaiOpenApiRequest.getBizParam());
+    Map<String, Object> bizParam = processRequest(wacaiOpenApiRequest.getBizParam());
+    return JsonTool.serialization(bizParam);
+  }
+
+  private Map<String, Object> processRequest(Map<String, Object> bizParam) {
+    Map<String, byte[]> fileParam = new HashMap<>();
+    for (String paramKey : bizParam.keySet()) {
+      Object paramValue = bizParam.get(paramKey);
+      if (paramValue instanceof byte[]) {
+        fileParam.put(paramKey, (byte[]) paramValue);
+      }
+    }
+    if (fileParam.size() > 0) {
+      callCount++;
+      MultipartBody.Builder bodyBuild = new MultipartBody.Builder().setType(MultipartBody.FORM);
+      for (Map.Entry<String, byte[]> fileEntry : fileParam.entrySet()) {
+        bodyBuild.addFormDataPart("files", fileEntry.getKey(), RequestBody.create(OBJ_STREAM, fileEntry.getValue()));
+      }
+      Request fileRequest = new Request.Builder().url(fileGatewayEntryUrl)
+          .addHeader("X-access-token", accessTokenClient.getCachedAccessToken())
+          .addHeader("appKey", this.appKey)
+          .post(bodyBuild.build())
+          .build();
+      try (Response response = client.newCall(fileRequest).execute()){
+        ResponseBody body = response.body();
+        String bodyStr = body.string();
+        int code = response.code();
+        if (code != 200) {
+          log.error("upload file error,httpCode:{},bodyStr:{}",code,bodyStr);
+          throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_ERROR);
+        }
+        FileGatewayRes fileGatewayRes = JSON.parseObject(bodyStr, FileGatewayRes.class);
+        if (fileGatewayRes.code == FileGatewayRes.SUCCESS_CODE) {
+          for (RemoteFile remoteFile : fileGatewayRes.getData()) {
+            bizParam.put(remoteFile.getOriginalName(),remoteFile.getFilename());
+          }
+        }else if (fileGatewayRes.code == FileGatewayRes.RETRY_CODE){
+          if (callCount < maxCallCount) {
+            accessTokenClient.setForceCacheInvalid(true);
+            processRequest(bizParam);
+          }else {
+            log.error("upload file error reach max retryCount{},httpCode:{},bodyStr:{}",callCount,code,bodyStr);
+            throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
+          }
+        }else {
+          log.error("upload file error,httpCode:{},bodyStr:{}",code,bodyStr);
+          throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
+        }
+      } catch (IOException e) {
+        log.error("upload file error:{}",e);
+        throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_CLIENT_ERROR);
+      }finally {
+        callCount = 0;
+      }
+    }
+    return bizParam;
   }
 
   public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
