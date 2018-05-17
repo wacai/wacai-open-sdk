@@ -15,7 +15,7 @@ public class WacaiOpenApiResponseException extends RuntimeException {
   private final String error;
 
   public WacaiOpenApiResponseException(int code, String error, Throwable throwable) {
-    super(throwable);
+    super(code+":"+error,throwable);
     this.code = code;
     this.error = error;
   }
