@@ -21,11 +21,16 @@ public class WacaiOpenApiResponseException extends RuntimeException {
   }
 
   public WacaiOpenApiResponseException(WacaiErrorResponse wacaiErrorResponse) {
-    this(wacaiErrorResponse.getCode(), wacaiErrorResponse.getError());
+    super(wacaiErrorResponse.getCode()+":"+wacaiErrorResponse.getError());
+    this.code= wacaiErrorResponse.getCode();
+    this.error= wacaiErrorResponse.getError();
+
   }
 
   public WacaiOpenApiResponseException(ErrorCode errorCode) {
-    this(errorCode.getCode(), errorCode.getDescription());
+    super(errorCode.getCode()+":"+errorCode.getDescription());
+    this.code= errorCode.getCode();
+    this.error= errorCode.getDescription();
   }
 
   public WacaiOpenApiResponseException(ErrorCode errorCode, Throwable throwable) {
