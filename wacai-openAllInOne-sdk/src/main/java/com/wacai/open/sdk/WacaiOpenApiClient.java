@@ -79,7 +79,8 @@ public class WacaiOpenApiClient {
   @Setter
   private JsonProcessor processor;
 
-  private int callCount = 0;
+
+  private ThreadLocal<Integer> callCount = ThreadLocal.withInitial(() -> 0);
 
   private final int maxCallCount = 3;
 
@@ -218,7 +219,9 @@ public class WacaiOpenApiClient {
       }
     }
     if (fileParam.size() > 0) {
-      callCount++;
+      int count = callCount.get();
+      count++;
+      callCount.set(count);
       MultipartBody.Builder bodyBuild = new MultipartBody.Builder().setType(MultipartBody.FORM);
       for (Map.Entry<String, byte[]> fileEntry : fileParam.entrySet()) {
         bodyBuild.addFormDataPart("files", fileEntry.getKey(), RequestBody.create(OBJ_STREAM, fileEntry.getValue()));
@@ -242,7 +245,7 @@ public class WacaiOpenApiClient {
             bizParam.put(remoteFile.getOriginalName(),remoteFile.getFilename());
           }
         }else if (fileGatewayRes.code == FileGatewayRes.RETRY_CODE){
-          if (callCount < maxCallCount) {
+          if (count < maxCallCount) {
             accessTokenClient.setForceCacheInvalid(true);
             processRequest(bizParam);
           }else {
@@ -257,7 +260,7 @@ public class WacaiOpenApiClient {
         log.error("upload file error:{}",e);
         throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_CLIENT_ERROR);
       }finally {
-        callCount = 0;
+        callCount.set(0);
       }
     }
     return bizParam;
