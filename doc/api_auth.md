@@ -12,7 +12,7 @@
 - 接口参数：
   - grant_type: 授权类型，必填，当前接口目前只支持 client_credentials
   - app_key: 必传
-  - timestamp: 当前时间戳，以秒为单位
+  - timestamp: 当前时间戳，以毫秒为单位
   - sign: 请求参数的[token签名](token_sign.md)，必传
 - 返回结构：
 
@@ -39,7 +39,7 @@
 - 接口参数：
   - grant_type: 授权类型，必填，当前接口目前只支持 refresh_token
   - app_key: 必传
-  - timestamp: 当前时间戳，以秒为单位
+  - timestamp: 当前时间戳，以毫秒为单位
   - sign: 请求参数的[token签名](token_sign.md)，必传
   - refresh_token: 必传，第一步申请得到的refresh_token
 - 返回结果同上
