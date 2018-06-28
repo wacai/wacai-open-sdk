@@ -33,7 +33,7 @@ public class WacaiHttpServletRequest extends HttpServletRequestWrapper {
 		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(body);
 		return new ServletInputStream() {
 			@Override
-			public int read() throws IOException {
+			public int read() {
 				return byteArrayInputStream.read();
 			}
 		};
