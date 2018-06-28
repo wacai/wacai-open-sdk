@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -40,16 +41,24 @@ public class AccessTokenClient {
 
 	private static ScheduledExecutorService checkThread = Executors
 			.newSingleThreadScheduledExecutor();
+
 	private static String cacheDir =
 			System.getProperty("user.home", File.separator + "tmp") + File.separator + ".wacaiSdk"
 					+ File.separator + "caches";
+
 	private final String appKey;
+
 	private final String appSecret;
+
 	private OkHttpClient client = new OkHttpClient();
+
 	private volatile AccessToken accessTokenCached;
+
 	private Date accessTokenExpireDate;
+
 	@Setter
 	private String gatewayAuthUrl = "https://open.wacai.com/gw/auth";
+
 	/**
 	 * 用来AccessToken强制缓存重新加载
 	 */
@@ -59,7 +68,7 @@ public class AccessTokenClient {
 	@Setter
 	private JsonProcessor processor;
 
-	private static ConcurrentHashMap<String, Runnable> scheduleTask = new ConcurrentHashMap<>();
+	private static ConcurrentMap<String, Runnable> scheduleTask = new ConcurrentHashMap<>();
 
 	public synchronized void init() {
 		FileUtils.mkdirsIfNecessary(cacheDir);
@@ -218,7 +227,7 @@ public class AccessTokenClient {
 
 	public static class FileUtils {
 
-		public static boolean fileExists(String file) {
+		static boolean fileExists(String file) {
 			File f = new File(file);
 			return f.exists();
 		}
@@ -226,7 +235,7 @@ public class AccessTokenClient {
 		/**
 		 * create dir if not exist
 		 */
-		public static boolean mkdirsIfNecessary(String dir) {
+		static boolean mkdirsIfNecessary(String dir) {
 			File file = new File(dir);
 			if (!file.exists() || !file.isDirectory()) {
 				return file.mkdirs();
@@ -234,21 +243,7 @@ public class AccessTokenClient {
 			return true;
 		}
 
-		/**
-		 * clear all files in current dir
-		 */
-		public static void clearDir(String dir) {
-			manageDir(new File(dir), false);
-		}
-
-		/**
-		 * remove dir if exist(in recursion, like 'rm -r')
-		 */
-		public static void rmdir(String dir) {
-			manageDir(new File(dir), true);
-		}
-
-		public static void objWrite(String file, Object obj) throws IOException {
+		static void objWrite(String file, Object obj) throws IOException {
 			File outFile = new File(file);
 			FileOutputStream fos = new FileOutputStream(outFile, false);
 			ObjectOutputStream oos = new ObjectOutputStream(fos);
@@ -258,7 +253,7 @@ public class AccessTokenClient {
 			fos.close();
 		}
 
-		public static Object objRead(String file) throws IOException, ClassNotFoundException {
+		static Object objRead(String file) throws IOException, ClassNotFoundException {
 			File f = new File(file);
 			if (!f.exists() || !f.isFile()) {
 				return null;
@@ -266,56 +261,6 @@ public class AccessTokenClient {
 			FileInputStream fis = new FileInputStream(f);
 			ObjectInputStream ois = new ObjectInputStream(fis);
 			return ois.readObject();
-
-		}
-
-		public static void writeFile(String file, String content) throws IOException {
-			FileOutputStream fos = new FileOutputStream(file, false);
-			fos.write(content.getBytes(StandardCharsets.UTF_8));
-			fos.flush();
-			fos.close();
-		}
-
-		public static byte[] readFile(String file) throws IOException {
-			File f = new File(file);
-			if (!f.exists() || !f.isFile()) {
-				return new byte[0];
-			}
-			FileInputStream fis = new FileInputStream(f);
-			byte[] buf = new byte[16];
-			int readBytes = -1;
-			ByteArrayOutputStream baos = new ByteArrayOutputStream(16);
-			while (-1 != (readBytes = fis.read(buf, 0, buf.length))) {
-				baos.write(buf, 0, readBytes);
-			}
-			fis.close();
-			return baos.toByteArray();
-		}
-
-		public static void rmFile(String file) {
-			rmFile(new File(file));
-		}
-
-		private static void manageDir(File file, boolean rm) {
-			if (file.exists() && file.isDirectory()) {
-				File[] children = file.listFiles();
-				for (File child : children) {
-					if (child.isFile()) {
-						rmFile(child);
-					} else {
-						manageDir(child, true);
-					}
-				}
-				if (rm) {
-					file.delete();
-				}
-			}
-		}
-
-		private static void rmFile(File file) {
-			if (null != file && file.exists()) {
-				file.delete();
-			}
 		}
 	}
 }
