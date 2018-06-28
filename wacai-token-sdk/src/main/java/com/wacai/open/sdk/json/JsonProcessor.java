@@ -8,13 +8,11 @@ import java.util.Map;
  */
 public interface JsonProcessor {
 
+	<T> T deserialization(String json, Type type);
 
-  <T> T deserialization(String json, Type type);
+	byte[] serialization(Object obj);
 
-  byte[] serialization(Object obj);
+	String objToStr(Object obj);
 
-  String objToStr(Object obj);
-
-  Map<String, Object> objToMap(Object obj);
-
+	Map<String, Object> objToMap(Object obj);
 }

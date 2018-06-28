@@ -4,7 +4,7 @@ import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
 
 public interface WacaiOpenApiResponseCallback<T> {
 
-  void onSuccess(T data);
+	void onSuccess(T data);
 
-  void onFailure(WacaiOpenApiResponseException ex);
+	void onFailure(WacaiOpenApiResponseException ex);
 }

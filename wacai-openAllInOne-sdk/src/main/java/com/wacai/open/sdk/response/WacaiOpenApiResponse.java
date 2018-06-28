@@ -5,15 +5,15 @@ import lombok.Data;
 @Data
 public class WacaiOpenApiResponse<T> {
 
-  private static final int SUCCESS_CODE = 0;
+	private static final int SUCCESS_CODE = 0;
 
-  private int code;
+	private int code;
 
-  private String error;
+	private String error;
 
-  private T data;
+	private T data;
 
-  public boolean isSuccess() {
-    return code == SUCCESS_CODE;
-  }
+	public boolean isSuccess() {
+		return code == SUCCESS_CODE;
+	}
 }

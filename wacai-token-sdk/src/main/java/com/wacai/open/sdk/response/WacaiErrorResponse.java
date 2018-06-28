@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class WacaiErrorResponse {
 
-  private int code;
+	private int code;
 
-  private String error;
+	private String error;
 }
