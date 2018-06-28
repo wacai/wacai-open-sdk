@@ -191,7 +191,7 @@ public class AccessTokenClient {
 
       ResponseBody responseBody = response.body();
       if (responseBody == null) {
-        throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+        throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
       }
       String responseBodyStr = responseBody.string();
       int code = response.code();
@@ -201,12 +201,12 @@ public class AccessTokenClient {
             JsonTool.deserialization(responseBodyStr, WacaiErrorResponse.class);
         throw new WacaiOpenApiResponseException(wacaiErrorResponse);
       } else if (code != 200) {
-        throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+        throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
       }
       Map tokenMap = JsonTool.deserialization(responseBodyStr, Map.class);
       return tokenTransfer(tokenMap);
     } catch (IOException e) {
-      throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
+      throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR, e);
     }
   }
 

@@ -43,7 +43,7 @@ public class WacaiOpenApiResponseException extends RuntimeException {
    * @return {@code true} 如果是系统异常
    */
   public boolean isSystem() {
-    return ErrorCode.SYSTEM_ERROR.getCode() == code;
+    return ErrorCode.CLIENT_SYSTEM_ERROR.getCode() == code;
   }
 
   /**

@@ -152,7 +152,7 @@ public class WacaiOpenApiClient {
 
       if (body == null) {
         log.error("response body is null");
-        throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+        throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
       }
 
       String responseBodyString = body.string();
@@ -170,7 +170,7 @@ public class WacaiOpenApiClient {
               .deserialization(responseBodyString, WacaiErrorResponse.class);
         } catch (Exception e) {
           log.error("failed to deserialization {}", responseBodyString, e);
-          throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+          throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
         }
         if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
             || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
@@ -184,10 +184,10 @@ public class WacaiOpenApiClient {
 
       log.info("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ", parseTraceId(response),
           wacaiOpenApiRequest.getApiName(), response.code(), responseBodyString);
-      throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+      throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
     } catch (IOException e) {
       log.error("failed to execute {}", request, e);
-      throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
+      throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR, e);
     } catch (ClassCastException e) {
       throw new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE, e);
     }
@@ -277,14 +277,14 @@ public class WacaiOpenApiClient {
     client.newCall(request).enqueue(new Callback() {
       @Override
       public void onFailure(Call call, IOException e) {
-        callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e));
+        callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR, e));
       }
 
       @Override
       public void onResponse(Call call, Response response) throws IOException {
         ResponseBody body = response.body();
         if (body == null) {
-          callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+          callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR));
           return;
         }
         String responseBodyString = body.string();
@@ -300,7 +300,7 @@ public class WacaiOpenApiClient {
             callback.onSuccess(bytes);
           } catch (IOException e) {
             log.error("read response body error", e);
-            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR));
           } catch (ClassCastException e) {
             callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE));
           }
@@ -312,7 +312,7 @@ public class WacaiOpenApiClient {
                 .deserialization(responseBodyString, WacaiErrorResponse.class);
           } catch (Exception e) {
             log.error("failed to deserialization {}", responseBodyString, e);
-            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR));
             return;
           }
           if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
@@ -329,7 +329,7 @@ public class WacaiOpenApiClient {
         // http code 非 200 也不是 400
         log.error("traceId {},api {},request {}, response code is {}", parseTraceId(response),
             wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest, response.code());
-        callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+        callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR));
       }
     });
   }
