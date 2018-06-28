@@ -56,6 +56,16 @@ public class WacaiOpenApiClient {
 
   private static final MediaType OBJ_STREAM = MediaType.parse("application/octet-stream");
 
+  /**
+   * 文件网关失败最大重试次数
+   */
+  private static final int FILE_GW_MAX_RETRY_NUM = 3;
+
+  /**
+   * 尝试获取新 token 的最大次数
+   */
+  private static final int REFRESH_TOKEN_MAX_RETRY_NUM = 3;
+
   private static final List<String> SIGN_HEADERS = Arrays.asList(X_WAC_VERSION, X_WAC_TIMESTAMP,
                                                                  X_WAC_ACCESS_TOKEN);
 
@@ -78,10 +88,6 @@ public class WacaiOpenApiClient {
 
   @Setter
   private JsonProcessor processor;
-
-  private ThreadLocal<Integer> callCount = ThreadLocal.withInitial(() -> 0);
-
-  private static final int MAX_CALL_COUNT = 3;
 
   @Setter
   private String fileGatewayEntryUrl = "http://file.wacai.info/upload/normal/const";
@@ -120,11 +126,11 @@ public class WacaiOpenApiClient {
   }
 
   public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
-    return doInvoke(wacaiOpenApiRequest, typeReference.getType());
+    return doInvoke(wacaiOpenApiRequest, typeReference.getType(), 0);
   }
 
   public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, Class<T> clazz) {
-    return doInvoke(wacaiOpenApiRequest, clazz);
+    return doInvoke(wacaiOpenApiRequest, clazz, 0);
   }
 
   private boolean isNeedDecode(Response response) {
@@ -135,7 +141,10 @@ public class WacaiOpenApiClient {
     return response.header(X_WAC_TRACE_ID);
   }
 
-  private <T> T doInvoke(WacaiOpenApiRequest wacaiOpenApiRequest, Type type) {
+  private <T> T doInvoke(WacaiOpenApiRequest wacaiOpenApiRequest, Type type, int retryNum) {
+    if (retryNum ++ >= REFRESH_TOKEN_MAX_RETRY_NUM) {
+      throw new WacaiOpenApiResponseException(ErrorCode.REFRESH_TOKEN_FAILURE_MAX_NUM);
+    }
 
     Request request = assemblyRequest(wacaiOpenApiRequest);
     try (Response response = client.newCall(request).execute()) {
@@ -168,7 +177,7 @@ public class WacaiOpenApiClient {
 
           log.info("Access token invalid or expired, apply new one instead.");
           accessTokenClient.setForceCacheInvalid(true);
-          return doInvoke(wacaiOpenApiRequest, type);
+          return doInvoke(wacaiOpenApiRequest, type, retryNum);
         }
         throw new WacaiOpenApiResponseException(wacaiErrorResponse);
       }
@@ -193,11 +202,11 @@ public class WacaiOpenApiClient {
   }
 
   private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
-    Map<String, Object> bizParam = processRequest(wacaiOpenApiRequest.getBizParam());
+    Map<String, Object> bizParam = processRequest(wacaiOpenApiRequest.getBizParam(), 0);
     return JsonTool.serialization(bizParam);
   }
 
-  private Map<String, Object> processRequest(Map<String, Object> bizParam) {
+  private Map<String, Object> processRequest(Map<String, Object> bizParam, int retryNum) {
     Map<String, byte[]> fileParam = new HashMap<>();
     for (String paramKey : bizParam.keySet()) {
       Object paramValue = bizParam.get(paramKey);
@@ -206,9 +215,6 @@ public class WacaiOpenApiClient {
       }
     }
     if (fileParam.size() > 0) {
-      int count = callCount.get();
-      count++;
-      callCount.set(count);
       MultipartBody.Builder bodyBuild = new MultipartBody.Builder().setType(MultipartBody.FORM);
       for (Map.Entry<String, byte[]> fileEntry : fileParam.entrySet()) {
         bodyBuild.addFormDataPart("files", fileEntry.getKey(), RequestBody.create(OBJ_STREAM, fileEntry.getValue()));
@@ -232,11 +238,11 @@ public class WacaiOpenApiClient {
             bizParam.put(remoteFile.getOriginalName(),remoteFile.getFilename());
           }
         }else if (fileGatewayRes.code == FileGatewayRes.RETRY_CODE){
-          if (count < MAX_CALL_COUNT) {
+          if (retryNum < FILE_GW_MAX_RETRY_NUM) {
             accessTokenClient.setForceCacheInvalid(true);
-            processRequest(bizParam);
+            processRequest(bizParam, ++ retryNum);
           }else {
-            log.error("upload file error reach max retryCount{},httpCode:{},bodyStr:{}",callCount,code,bodyStr);
+            log.error("upload file error reach max retryCount:{},httpCode:{},bodyStr:{}", retryNum, code, bodyStr);
             throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
           }
         }else {
@@ -246,8 +252,6 @@ public class WacaiOpenApiClient {
       } catch (IOException e) {
         log.error("upload file error:{}",e);
         throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_CLIENT_ERROR);
-      }finally {
-        callCount.set(0);
       }
     }
     return bizParam;

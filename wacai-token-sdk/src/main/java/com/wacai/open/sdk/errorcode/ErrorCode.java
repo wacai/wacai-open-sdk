@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ErrorCode {
 
+  REFRESH_TOKEN_FAILURE_MAX_NUM(9998, "换取令牌失败超过最大次数"),
   SYSTEM_ERROR(10000, "系统错误"),
   FILE_SYSTEM_ERROR(10014, "文件系统服务端非200错误"),
   FILE_SYSTEM_CLIENT_ERROR(10016, "文件系统客户端网络IO错误"),
