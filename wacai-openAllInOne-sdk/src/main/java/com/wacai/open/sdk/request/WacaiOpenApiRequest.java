@@ -8,8 +8,10 @@ import java.util.Map;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @Data
+@ToString
 @RequiredArgsConstructor
 public class WacaiOpenApiRequest {
 

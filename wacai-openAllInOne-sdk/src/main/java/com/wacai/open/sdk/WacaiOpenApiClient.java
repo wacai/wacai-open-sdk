@@ -68,7 +68,7 @@ public class WacaiOpenApiClient {
 
   private AccessTokenClient accessTokenClient;
 
-  private AtomicBoolean initFlag = new AtomicBoolean(false);
+  private final AtomicBoolean initFlag = new AtomicBoolean(false);
 
   @Setter
   private String gatewayEntryUrl = "https://open.wacai.com/gw/api_entry";
@@ -79,14 +79,12 @@ public class WacaiOpenApiClient {
   @Setter
   private JsonProcessor processor;
 
-
   private ThreadLocal<Integer> callCount = ThreadLocal.withInitial(() -> 0);
 
-  private final int maxCallCount = 3;
+  private static final int MAX_CALL_COUNT = 3;
 
   @Setter
   private String fileGatewayEntryUrl = "http://file.wacai.info/upload/normal/const";
-
 
   public WacaiOpenApiClient(String appKey, String appSecret) {
     this.appKey = appKey;
@@ -130,12 +128,7 @@ public class WacaiOpenApiClient {
   }
 
   private boolean isNeedDecode(Response response) {
-    String decode = response.header(X_WAC_DECODE);
-    if (decode != null) {
-      return false;
-    } else {
-      return true;
-    }
+    return response.header(X_WAC_DECODE) == null;
   }
 
   private String parseTraceId(Response response) {
@@ -147,49 +140,44 @@ public class WacaiOpenApiClient {
     Request request = assemblyRequest(wacaiOpenApiRequest);
     try (Response response = client.newCall(request).execute()) {
       ResponseBody body = response.body();
-      String bodyStr = body.string();
-      if (response.code() != 200 || body == null) {
-        log.info("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ", parseTraceId(response),
-                 wacaiOpenApiRequest.getApiName(), response.code(), body == null ? "null" : bodyStr);
-        if (response.code() != 400 || body == null) {
+
+      if (body == null) {
+        log.error("response body is null");
+        throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
+      }
+
+      String responseBodyString = body.string();
+
+      if (response.code() == 200) {
+        if (isNeedDecode(response)) {
+          return deserialization(responseBodyString, type);
+        } else {
+          return (T) body.bytes();
+        }
+      } else if (response.code() == 400) {
+        WacaiErrorResponse wacaiErrorResponse;
+        try {
+          wacaiErrorResponse = JsonTool
+              .deserialization(responseBodyString, WacaiErrorResponse.class);
+        } catch (Exception e) {
+          log.error("failed to deserialization {}", responseBodyString, e);
           throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
         }
+        if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
+            || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
 
-        //todo 透传请求不能反序列化
-        if (isNeedDecode(response)) {
-          String responseBodyString = bodyStr;
-          WacaiErrorResponse wacaiErrorResponse;
-          try {
-            wacaiErrorResponse = JsonTool
-                .deserialization(responseBodyString, WacaiErrorResponse.class);
-          } catch (Exception e) {
-            log.error("failed to deserialization {}", responseBodyString, e);
-            throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
-          }
-          if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
-              || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
-
-            log.info("Access token invalid or expired, apply new one instead.");
-            accessTokenClient.setForceCacheInvalid(true);
-            return doInvoke(wacaiOpenApiRequest, type);
-          }
-          throw new WacaiOpenApiResponseException(wacaiErrorResponse);
+          log.info("Access token invalid or expired, apply new one instead.");
+          accessTokenClient.setForceCacheInvalid(true);
+          return doInvoke(wacaiOpenApiRequest, type);
         }
-
+        throw new WacaiOpenApiResponseException(wacaiErrorResponse);
       }
 
-      if (isNeedDecode(response)) {
-        return deserialization(bodyStr, type);
-      } else {
-        if (response.code() != 200) {
-          throw new WacaiOpenApiResponseException(response.code(), body == null ? "null" : bodyStr);
-        }
-        return (T) body.bytes();
-      }
-
+      log.info("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ", parseTraceId(response),
+          wacaiOpenApiRequest.getApiName(), response.code(), responseBodyString);
+      throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR);
     } catch (IOException e) {
       log.error("failed to execute {}", request, e);
-
       throw new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR, e);
     } catch (ClassCastException e) {
       throw new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE, e);
@@ -197,13 +185,12 @@ public class WacaiOpenApiClient {
   }
 
   @SuppressWarnings("unchecked")
-  private <T> T deserialization(String json, Type type) throws IOException {
+  private <T> T deserialization(String json, Type type) {
     if (String.class.equals(type)) {
       return (T) json;
     }
     return JsonTool.deserialization(json, type);
   }
-
 
   private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
     Map<String, Object> bizParam = processRequest(wacaiOpenApiRequest.getBizParam());
@@ -245,7 +232,7 @@ public class WacaiOpenApiClient {
             bizParam.put(remoteFile.getOriginalName(),remoteFile.getFilename());
           }
         }else if (fileGatewayRes.code == FileGatewayRes.RETRY_CODE){
-          if (count < maxCallCount) {
+          if (count < MAX_CALL_COUNT) {
             accessTokenClient.setForceCacheInvalid(true);
             processRequest(bizParam);
           }else {
@@ -298,67 +285,52 @@ public class WacaiOpenApiClient {
         }
         String responseBodyString = body.string();
 
-        if (response.code() == 400) {
-          WacaiErrorResponse wacaiErrorResponse;
-          //非透传
+        if (response.code() == 200) {
           if (isNeedDecode(response)) {
-
-            try {
-              wacaiErrorResponse = JsonTool
-                  .deserialization(responseBodyString, WacaiErrorResponse.class);
-            } catch (Exception e) {
-              log.error("failed to deserialization {}", responseBodyString, e);
-              callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
-              return;
-            }
-            if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
-                || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
-
-              log.info("Access token invalid or expired, apply new one instead.");
-              accessTokenClient.setForceCacheInvalid(true);
-              doInvoke(wacaiOpenApiRequest, type, callback);
-            } else {
-              callback.onFailure(new WacaiOpenApiResponseException(wacaiErrorResponse));
-            }
-          }
-          //区分是否透传
-          else if (response.code() != 200) {
-            log.error("traceId {},api {},request {}, response code is {}", parseTraceId(response),
-                      wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest, response.code());
-            if (isNeedDecode(response)) {
-              callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
-            } else {
-              callback.onFailure(
-                  new WacaiOpenApiResponseException(response.code(), body == null ? "null" : responseBodyString));
-            }
+            callback.onSuccess(deserialization(responseBodyString, type));
             return;
           }
-
-        }
-
-        if (isNeedDecode(response)) {
-          callback.onSuccess(deserialization(responseBodyString, type));
-        } else {
           T bytes;
           try {
             bytes = (T) body.bytes();
             callback.onSuccess(bytes);
           } catch (IOException e) {
+            log.error("read response body error", e);
             callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
           } catch (ClassCastException e) {
             callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.ERROR_RET_TYPE));
           }
+          return;
+        } else if (response.code() == 400) {
+          WacaiErrorResponse wacaiErrorResponse;
+          try {
+            wacaiErrorResponse = JsonTool
+                .deserialization(responseBodyString, WacaiErrorResponse.class);
+          } catch (Exception e) {
+            log.error("failed to deserialization {}", responseBodyString, e);
+            callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
+            return;
+          }
+          if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
+              || wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
 
+            log.info("Access token invalid or expired, apply new one instead.");
+            accessTokenClient.setForceCacheInvalid(true);
+            doInvoke(wacaiOpenApiRequest, type, callback);
+          } else {
+            callback.onFailure(new WacaiOpenApiResponseException(wacaiErrorResponse));
+          }
+          return;
         }
-
+        // http code 非 200 也不是 400
+        log.error("traceId {},api {},request {}, response code is {}", parseTraceId(response),
+            wacaiOpenApiRequest.getApiName(), wacaiOpenApiRequest, response.code());
+        callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.SYSTEM_ERROR));
       }
     });
   }
 
   private Request assemblyRequest(WacaiOpenApiRequest wacaiOpenApiRequest) {
-
-    MediaType mediaType = JSON_MEDIA_TYPE;
-
     if (!initFlag.get()) {
       throw new IllegalStateException(
           "Not initial client, please call init method before doInvoke");
@@ -368,6 +340,7 @@ public class WacaiOpenApiClient {
 
     byte[] byteBuffer = wacaiOpenApiRequest.getByteBuffer();
 
+    MediaType mediaType = JSON_MEDIA_TYPE;
     if (byteBuffer != null && byteBuffer.length > 0) {
       bodyBytes = byteBuffer;
       mediaType = OBJ_STREAM;
@@ -393,7 +366,6 @@ public class WacaiOpenApiClient {
 
   private String generateSignature(String apiName, String apiVersion,
                                    Map<String, String> headerMap, byte[] bodyBytes) {
-
     String headerString = headerMap.entrySet().stream()
         .filter(entry -> SIGN_HEADERS.contains(entry.getKey()))
         .sorted(Map.Entry.comparingByKey())
