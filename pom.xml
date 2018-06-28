@@ -8,7 +8,7 @@
   <groupId>com.wacai</groupId>
   <artifactId>wacai-open-sdk</artifactId>
   <packaging>pom</packaging>
-  <version>1.2.4</version>
+  <version>1.3.0-SNAPSHOT</version>
   <modules>
     <module>wacai-token-sdk</module>
     <module>wacai-openAllInOne-sdk</module>
