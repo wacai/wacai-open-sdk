@@ -100,7 +100,6 @@ public class WacaiOpenApiClient {
 	}
 
 	public void init() {
-
 		if (!initFlag.compareAndSet(false, true)) {
 			throw new IllegalStateException("init state");
 		}
