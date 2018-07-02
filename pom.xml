@@ -148,4 +148,15 @@
     </plugins>
   </build>
 
+  <!--当前jar包上传到mavne中央仓库-->
+  <distributionManagement>
+    <repository>
+      <id>snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </repository>
+    <snapshotRepository>
+      <id>snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
 </project>
