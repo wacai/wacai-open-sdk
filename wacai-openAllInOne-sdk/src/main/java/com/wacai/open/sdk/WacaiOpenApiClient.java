@@ -199,59 +199,69 @@ public class WacaiOpenApiClient {
 	}
 
 	private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
-		Map<String, Object> bizParam = processRequest(wacaiOpenApiRequest.getBizParam(), 0);
+		Map<String, Object> bizParam = uploadFirstIfHasFile(wacaiOpenApiRequest.getBizParam(), 0);
 		return JsonTool.serialization(bizParam);
 	}
 
-	private Map<String, Object> processRequest(Map<String, Object> bizParam, int retryNum) {
-		Map<String, byte[]> fileParam = new HashMap<>();
-		for (String paramKey : bizParam.keySet()) {
-			Object paramValue = bizParam.get(paramKey);
+	private Map<String, byte[]> filterByteArray(Map<String, Object> bizParam) {
+		Map<String, byte[]> fileParam = null;
+		for (Map.Entry<String, Object> entry : bizParam.entrySet()) {
+			Object paramValue = entry.getValue();
 			if (paramValue instanceof byte[]) {
-				fileParam.put(paramKey, (byte[]) paramValue);
+				if (fileParam == null) {
+					fileParam = new HashMap<>();
+				}
+				fileParam.put(entry.getKey(), (byte[]) paramValue);
 			}
 		}
-		if (fileParam.size() > 0) {
-			MultipartBody.Builder bodyBuild = new MultipartBody.Builder().setType(MultipartBody.FORM);
-			for (Map.Entry<String, byte[]> fileEntry : fileParam.entrySet()) {
-				bodyBuild.addFormDataPart("files", fileEntry.getKey(),
-						RequestBody.create(OBJ_STREAM, fileEntry.getValue()));
+		return fileParam;
+	}
+
+	private Map<String, Object> uploadFirstIfHasFile(Map<String, Object> bizParam, int retryNum) {
+		Map<String, byte[]> fileParam = filterByteArray(bizParam);
+		if (fileParam == null || fileParam.isEmpty()) {
+			return bizParam;
+		}
+
+		MultipartBody.Builder bodyBuild = new MultipartBody.Builder().setType(MultipartBody.FORM);
+		for (Map.Entry<String, byte[]> fileEntry : fileParam.entrySet()) {
+			bodyBuild.addFormDataPart("files", fileEntry.getKey(),
+					RequestBody.create(OBJ_STREAM, fileEntry.getValue()));
+		}
+		Request fileRequest = new Request.Builder().url(fileGatewayEntryUrl)
+				.addHeader("X-access-token", accessTokenClient.getCachedAccessToken())
+				.addHeader("appKey", appKey)
+				.post(bodyBuild.build())
+				.build();
+		try (Response response = client.newCall(fileRequest).execute()) {
+			ResponseBody body = response.body();
+			String bodyStr = body.string();
+			int code = response.code();
+			if (code != 200) {
+				log.error("upload file error,httpCode:{},bodyStr:{}", code, bodyStr);
+				throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_ERROR);
 			}
-			Request fileRequest = new Request.Builder().url(fileGatewayEntryUrl)
-					.addHeader("X-access-token", accessTokenClient.getCachedAccessToken())
-					.addHeader("appKey", this.appKey)
-					.post(bodyBuild.build())
-					.build();
-			try (Response response = client.newCall(fileRequest).execute()) {
-				ResponseBody body = response.body();
-				String bodyStr = body.string();
-				int code = response.code();
-				if (code != 200) {
-					log.error("upload file error,httpCode:{},bodyStr:{}", code, bodyStr);
-					throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_ERROR);
+			FileGatewayRes fileGatewayRes = JSON.parseObject(bodyStr, FileGatewayRes.class);
+			if (fileGatewayRes.getCode() == FileGatewayRes.SUCCESS_CODE) {
+				for (RemoteFile remoteFile : fileGatewayRes.getData()) {
+					bizParam.put(remoteFile.getOriginalName(), remoteFile.getFilename());
 				}
-				FileGatewayRes fileGatewayRes = JSON.parseObject(bodyStr, FileGatewayRes.class);
-				if (fileGatewayRes.getCode() == FileGatewayRes.SUCCESS_CODE) {
-					for (RemoteFile remoteFile : fileGatewayRes.getData()) {
-						bizParam.put(remoteFile.getOriginalName(), remoteFile.getFilename());
-					}
-				} else if (fileGatewayRes.getCode() == FileGatewayRes.RETRY_CODE) {
-					if (retryNum < FILE_GW_MAX_RETRY_NUM) {
-						accessTokenClient.setForceCacheInvalid(true);
-						processRequest(bizParam, ++retryNum);
-					} else {
-						log.error("upload file error reach max retryCount:{},httpCode:{},bodyStr:{}", retryNum,
-								code, bodyStr);
-						throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
-					}
+			} else if (fileGatewayRes.getCode() == FileGatewayRes.RETRY_CODE) {
+				if (retryNum < FILE_GW_MAX_RETRY_NUM) {
+					accessTokenClient.setForceCacheInvalid(true);
+					uploadFirstIfHasFile(bizParam, ++retryNum);
 				} else {
-					log.error("upload file error,httpCode:{},bodyStr:{}", code, bodyStr);
+					log.error("upload file error reach max retryCount:{},httpCode:{},bodyStr:{}", retryNum,
+							code, bodyStr);
 					throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
 				}
-			} catch (IOException e) {
-				log.error("upload file error:{}", e);
-				throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_CLIENT_ERROR);
+			} else {
+				log.error("upload file error,httpCode:{},bodyStr:{}", code, bodyStr);
+				throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
 			}
+		} catch (IOException e) {
+			log.error("upload file error:{}", e);
+			throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_CLIENT_ERROR);
 		}
 		return bizParam;
 	}
