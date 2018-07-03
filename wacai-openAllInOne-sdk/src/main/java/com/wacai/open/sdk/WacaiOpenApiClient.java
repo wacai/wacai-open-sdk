@@ -150,15 +150,15 @@ public class WacaiOpenApiClient {
 				throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
 			}
 
-			String responseBodyString = body.string();
-
 			if (response.code() == 200) {
 				if (isNeedDecode(response)) {
+					String responseBodyString = body.string();
 					return deserialization(responseBodyString, type);
 				} else {
 					return (T) body.bytes();
 				}
 			} else if (response.code() == 400) {
+				String responseBodyString = body.string();
 				WacaiErrorResponse wacaiErrorResponse;
 				try {
 					wacaiErrorResponse = JsonTool
@@ -177,7 +177,8 @@ public class WacaiOpenApiClient {
 				throw new WacaiOpenApiResponseException(wacaiErrorResponse);
 			}
 
-			log.info("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ",
+			String responseBodyString = body.string();
+			log.error("sdk error request log, traceId:{}, api:{},httpCode:{},httpBodyMsg:{} ",
 					parseTraceId(response),
 					wacaiOpenApiRequest.getApiName(), response.code(), responseBodyString);
 			throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
@@ -285,10 +286,10 @@ public class WacaiOpenApiClient {
 					callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR));
 					return;
 				}
-				String responseBodyString = body.string();
 
 				if (response.code() == 200) {
 					if (isNeedDecode(response)) {
+						String responseBodyString = body.string();
 						callback.onSuccess(deserialization(responseBodyString, type));
 						return;
 					}
@@ -305,6 +306,7 @@ public class WacaiOpenApiClient {
 					return;
 				} else if (response.code() == 400) {
 					WacaiErrorResponse wacaiErrorResponse;
+					String responseBodyString = body.string();
 					try {
 						wacaiErrorResponse = JsonTool
 								.deserialization(responseBodyString, WacaiErrorResponse.class);
