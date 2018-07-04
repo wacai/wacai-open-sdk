@@ -8,7 +8,6 @@ import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TIMESTAMP;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TRACE_ID;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_VERSION;
-import static java.util.stream.Collectors.joining;
 
 import com.alibaba.fastjson.JSON;
 import com.wacai.open.sdk.auth.AccessTokenClient;
@@ -29,6 +28,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -300,7 +301,8 @@ public class WacaiOpenApiClient {
 				if (response.code() == 200) {
 					if (isNeedDecode(response)) {
 						String responseBodyString = body.string();
-						callback.onSuccess(deserialization(responseBodyString, type));
+						T data = deserialization(responseBodyString, type);
+						callback.onSuccess(data);
 						return;
 					}
 					T bytes;
@@ -372,15 +374,27 @@ public class WacaiOpenApiClient {
 
 	private String generateSignature(String apiName, String apiVersion,
 			Map<String, String> headerMap, byte[] bodyBytes) {
-		String headerString = headerMap.entrySet().stream()
-				.filter(entry -> SIGN_HEADERS.contains(entry.getKey()))
-				.sorted(Map.Entry.comparingByKey())
-				.map(entry -> entry.getKey() + "=" + entry.getValue())
-				.collect(joining("&"));
+		String headerString = generateHeadersPlainText(headerMap);
 
 		String bodyMd5 = Base64.encodeBase64String(DigestUtils.md5(bodyBytes));
 
 		String signPlainText = apiName + "|" + apiVersion + "|" + headerString + "|" + bodyMd5;
 		return SignUtil.generateSign(signPlainText, appSecret);
+	}
+
+	private String generateHeadersPlainText(Map<String, String> headerMap) {
+		Map<String, String> headersForSign = new TreeMap<>();
+		for (Entry<String, String> entry : headerMap.entrySet()) {
+			if (SIGN_HEADERS.contains(entry.getKey())) {
+				headersForSign.put(entry.getKey(), entry.getValue());
+			}
+		}
+
+		StringBuilder headerStringBuilder = new StringBuilder();
+		for (Entry<String, String> entry : headersForSign.entrySet()) {
+			headerStringBuilder.append('&').append(entry.getKey()).append("=").append(entry.getValue());
+		}
+
+		return headerStringBuilder.substring(1);
 	}
 }

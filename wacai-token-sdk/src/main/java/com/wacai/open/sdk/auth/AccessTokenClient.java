@@ -77,44 +77,47 @@ public class AccessTokenClient {
 		synchronized (AccessTokenClient.class) {
 			Runnable oldTask = scheduleTask.get(taskKey);
 			if (oldTask == null) {
-				Runnable task = () -> {
-					try {
-						String fileName = cacheDir + File.separator + Base64
-								.encodeBase64URLSafeString(DigestUtils.md5(appKey + "_" + appSecret));
-						boolean exists = FileUtils.fileExists(fileName);
-						AccessTokenDto dto;
-						if (exists && accessTokenCached == null) {//需要文件操作场景
-							try {
-								Object obj = FileUtils.objRead(fileName);
-								if (null != obj) {
-									AccessTokenDto tokenFile = (AccessTokenDto) obj;
-									if (tokenFile.getAccessTokenExpireDate().getTime() > System.currentTimeMillis()
-											&& !forceCacheInvalid) {//不刷新场景
-										accessTokenCached = tokenFile.getToken();
-										accessTokenExpireDate = tokenFile.getAccessTokenExpireDate();
-										return;
-									} else {//文件token失效
-										throw new RuntimeException("token失效");
+				Runnable task = new Runnable() {
+					@Override
+					public void run() {
+						try {
+							String fileName = cacheDir + File.separator + Base64
+									.encodeBase64URLSafeString(DigestUtils.md5(appKey + "_" + appSecret));
+							boolean exists = FileUtils.fileExists(fileName);
+							AccessTokenDto dto;
+							if (exists && accessTokenCached == null) {//需要文件操作场景
+								try {
+									Object obj = FileUtils.objRead(fileName);
+									if (null != obj) {
+										AccessTokenDto tokenFile = (AccessTokenDto) obj;
+										if (tokenFile.getAccessTokenExpireDate().getTime() > System.currentTimeMillis()
+												&& !forceCacheInvalid) {//不刷新场景
+											accessTokenCached = tokenFile.getToken();
+											accessTokenExpireDate = tokenFile.getAccessTokenExpireDate();
+											return;
+										} else {//文件token失效
+											throw new RuntimeException("token失效");
+										}
+									} else {//文件无有效信息
+										throw new RuntimeException("token文件无有效信息");
 									}
-								} else {//文件无有效信息
-									throw new RuntimeException("token文件无有效信息");
+								} catch (Exception e) {//统一处理token无效情况
+									log.error("token error:", e);
+									dto = AccessTokenClient.this.cachedAccessToken();
 								}
-							} catch (Exception e) {//统一处理token无效情况
-								log.error("token error:", e);
-								dto = cachedAccessToken();
+							} else {//文件不存在 || 文件存在且过期
+								if (exists
+										&& accessTokenExpireDate.getTime()
+										< System.currentTimeMillis() + 400000) {//文件存在&&过期
+									forceCacheInvalid = true;
+								}
+								dto = AccessTokenClient.this.cachedAccessToken();
 							}
-						} else {//文件不存在 || 文件存在且过期
-							if (exists
-									&& accessTokenExpireDate.getTime()
-									< System.currentTimeMillis() + 400000) {//文件存在&&过期
-								forceCacheInvalid = true;
-							}
-							dto = cachedAccessToken();
+							FileUtils.objWrite(fileName, dto);
+							log.info("schedule refresh token:{}", dto);
+						} catch (Exception e) {
+							log.error("get access token error:", e);
 						}
-						FileUtils.objWrite(fileName, dto);
-						log.info("schedule refresh token:{}", dto);
-					} catch (Exception e) {
-						log.error("get access token error:", e);
 					}
 				};
 				checkThread.scheduleAtFixedRate(task, 0, 5, TimeUnit.MINUTES);

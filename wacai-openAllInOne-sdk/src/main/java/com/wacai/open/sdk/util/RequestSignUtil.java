@@ -3,7 +3,6 @@ package com.wacai.open.sdk.util;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE_HEADERS;
 import static com.wacai.open.sdk.util.SignUtil.generateSign;
-import static java.util.stream.Collectors.joining;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -11,7 +10,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.TreeMap;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -37,27 +38,9 @@ public class RequestSignUtil {
 		char delimit = '|';
 
 		List<String> keys = Arrays.asList(headers.get(X_WAC_SIGNATURE_HEADERS).split(","));
-		String headerString = headers.entrySet().stream().filter(entry -> keys.contains(entry.getKey()))
-				.sorted(Map.Entry.comparingByKey())
-				.map(entry -> {
-					String value = entry.getValue();
-					if (value == null) {
-						value = "";
-					}
-					return entry.getKey().toLowerCase() + "=" + value;
-				})
-				.collect(joining("&"));
+		String headerString = generateHeadersPlainText(headers, keys);
 
-		String paramString = params.entrySet().stream()
-				.sorted(Map.Entry.comparingByKey())
-				.map(entry -> {
-					String value = entry.getValue();
-					if (value == null) {
-						value = "";
-					}
-					return entry.getKey() + "=" + value;
-				})
-				.collect(joining("&"));
+		String paramString = generateParamsPlainText(params);
 
 		String signPlainText =
 				method + delimit + bodyMd5 + delimit + headerString + delimit + paramString;
@@ -70,6 +53,43 @@ public class RequestSignUtil {
 					expectedSign, signature, signPlainText);
 		}
 		return equals;
+	}
+
+	private static String generateHeadersPlainText(Map<String, String> headerMap, List<String> keys) {
+		Map<String, String> headersForSign = new TreeMap<>();
+		for (Entry<String, String> entry : headerMap.entrySet()) {
+			if (keys.contains(entry.getKey())) {
+				headersForSign.put(entry.getKey(), entry.getValue());
+			}
+		}
+
+		if (headersForSign.isEmpty()) {
+			return "";
+		}
+
+		StringBuilder headerStringBuilder = new StringBuilder();
+		for (Entry<String, String> entry : headersForSign.entrySet()) {
+			headerStringBuilder.append('&').append(entry.getKey().toLowerCase())
+					.append("=").append(entry.getValue() == null? "" : entry.getValue());
+		}
+
+		return headerStringBuilder.substring(1);
+	}
+
+	private static String generateParamsPlainText(Map<String, String> paramsMap) {
+		if (paramsMap == null || paramsMap.isEmpty()) {
+			return "";
+		}
+
+		Map<String, String> headersForSign = new TreeMap<>(paramsMap);
+
+		StringBuilder headerStringBuilder = new StringBuilder();
+		for (Entry<String, String> entry : headersForSign.entrySet()) {
+			headerStringBuilder.append('&').append(entry.getKey().toLowerCase())
+					.append("=").append(entry.getValue() == null? "" : entry.getValue());
+		}
+
+		return headerStringBuilder.substring(1);
 	}
 
 	public static boolean checkInboundRequestSign(HttpServletRequest httpServletRequest,
@@ -117,7 +137,11 @@ public class RequestSignUtil {
 			if (values.length == 1) {
 				value = values[0];
 			} else if (values.length > 1) {
-				value = Arrays.stream(values).collect(joining(","));
+				StringBuilder valueStringBuilder = new StringBuilder();
+				for (String v : values) {
+					valueStringBuilder.append(",").append(v);
+				}
+				value = valueStringBuilder.substring(1);
 			}
 			params.put(entry.getKey(), value);
 		}
