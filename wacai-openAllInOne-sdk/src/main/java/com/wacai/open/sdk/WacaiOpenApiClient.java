@@ -58,11 +58,6 @@ public class WacaiOpenApiClient {
 	 */
 	private static final int FILE_GW_MAX_RETRY_NUM = 3;
 
-	/**
-	 * 尝试获取新 token 的最大次数
-	 */
-	private static final int REFRESH_TOKEN_MAX_RETRY_NUM = 3;
-
 	private static final List<String> SIGN_HEADERS = Arrays.asList(X_WAC_VERSION, X_WAC_TIMESTAMP,
 			X_WAC_ACCESS_TOKEN, X_WAC_APP_KEY);
 
@@ -137,11 +132,11 @@ public class WacaiOpenApiClient {
 	}
 
 	public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
-		return doInvoke(wacaiOpenApiRequest, typeReference.getType(), 0);
+		return doInvoke(wacaiOpenApiRequest, typeReference.getType());
 	}
 
 	public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, Class<T> clazz) {
-		return doInvoke(wacaiOpenApiRequest, clazz, 0);
+		return doInvoke(wacaiOpenApiRequest, clazz);
 	}
 
 	private boolean isNeedDecode(Response response) {
@@ -152,11 +147,7 @@ public class WacaiOpenApiClient {
 		return response.header(X_WAC_TRACE_ID);
 	}
 
-	private <T> T doInvoke(WacaiOpenApiRequest wacaiOpenApiRequest, Type type, int retryNum) {
-		if (retryNum++ >= REFRESH_TOKEN_MAX_RETRY_NUM) {
-			throw new WacaiOpenApiResponseException(ErrorCode.REFRESH_TOKEN_FAILURE_MAX_NUM);
-		}
-
+	private <T> T doInvoke(WacaiOpenApiRequest wacaiOpenApiRequest, Type type) {
 		Request request = assemblyRequest(wacaiOpenApiRequest);
 		try (Response response = client.newCall(request).execute()) {
 			ResponseBody body = response.body();

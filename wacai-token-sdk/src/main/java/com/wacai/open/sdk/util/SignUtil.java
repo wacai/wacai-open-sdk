@@ -5,10 +5,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 
-@Slf4j
 public final class SignUtil {
 
 	public static String generateSign(String plainText, String cipher) {
@@ -28,6 +26,4 @@ public final class SignUtil {
 		byte[] signatureBytes = mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 		return Base64.encodeBase64URLSafeString(signatureBytes);
 	}
-
-
 }
