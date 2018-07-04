@@ -20,4 +20,6 @@ public class WacaiOpenApiHeader {
 	public static final String X_WAC_DECODE = "x_wac_decode_flag";
 
 	public static final String X_WAC_TRACE_ID = "custom";
+
+	public static final String X_WAC_APP_KEY = "x-wac-app-key";
 }

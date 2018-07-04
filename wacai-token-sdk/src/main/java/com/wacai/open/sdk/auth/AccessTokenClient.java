@@ -79,7 +79,6 @@ public class AccessTokenClient {
 			if (oldTask == null) {
 				Runnable task = () -> {
 					try {
-
 						String fileName = cacheDir + File.separator + Base64
 								.encodeBase64URLSafeString(DigestUtils.md5(appKey + "_" + appSecret));
 						boolean exists = FileUtils.fileExists(fileName);

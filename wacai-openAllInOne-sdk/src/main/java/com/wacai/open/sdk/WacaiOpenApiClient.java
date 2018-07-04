@@ -1,6 +1,7 @@
 package com.wacai.open.sdk;
 
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_ACCESS_TOKEN;
+import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_APP_KEY;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_DECODE;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SDK_VERSION;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_SIGNATURE;
@@ -63,7 +64,7 @@ public class WacaiOpenApiClient {
 	private static final int REFRESH_TOKEN_MAX_RETRY_NUM = 3;
 
 	private static final List<String> SIGN_HEADERS = Arrays.asList(X_WAC_VERSION, X_WAC_TIMESTAMP,
-			X_WAC_ACCESS_TOKEN);
+			X_WAC_ACCESS_TOKEN, X_WAC_APP_KEY);
 
 	private final String appKey;
 
@@ -111,13 +112,28 @@ public class WacaiOpenApiClient {
 		if (gatewayAuthUrl == null || gatewayAuthUrl.trim().length() <= 0) {
 			throw new IllegalArgumentException("invalid gatewayAuthUrl " + gatewayAuthUrl);
 		}
-		this.accessTokenClient = new AccessTokenClient(appKey, appSecret);
-		this.accessTokenClient.setGatewayAuthUrl(gatewayAuthUrl);
-		this.accessTokenClient.init();
+
 		if (client == null) {
 			this.client = new OkHttpClient();
 		}
 		JsonTool.initJsonProcess(processor);
+	}
+
+	private void initAccessTokenClient() {
+		this.accessTokenClient = new AccessTokenClient(appKey, appSecret);
+		this.accessTokenClient.setGatewayAuthUrl(gatewayAuthUrl);
+		this.accessTokenClient.init();
+	}
+
+	private AccessTokenClient getOrInitAccessTokenClient() {
+		if (accessTokenClient == null) {
+			synchronized (this) {
+				if (accessTokenClient == null) {
+					initAccessTokenClient();
+				}
+			}
+		}
+		return accessTokenClient;
 	}
 
 	public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
@@ -166,13 +182,6 @@ public class WacaiOpenApiClient {
 				} catch (Exception e) {
 					log.error("failed to deserialization {}", responseBodyString, e);
 					throw new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR);
-				}
-				if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
-						|| wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
-
-					log.info("Access token invalid or expired, apply new one instead.");
-					accessTokenClient.setForceCacheInvalid(true);
-					return doInvoke(wacaiOpenApiRequest, type, retryNum);
 				}
 				throw new WacaiOpenApiResponseException(wacaiErrorResponse);
 			}
@@ -229,7 +238,7 @@ public class WacaiOpenApiClient {
 					RequestBody.create(OBJ_STREAM, fileEntry.getValue()));
 		}
 		Request fileRequest = new Request.Builder().url(fileGatewayEntryUrl)
-				.addHeader("X-access-token", accessTokenClient.getCachedAccessToken())
+				.addHeader("X-access-token", getOrInitAccessTokenClient().getCachedAccessToken())
 				.addHeader("appKey", appKey)
 				.post(bodyBuild.build())
 				.build();
@@ -248,7 +257,7 @@ public class WacaiOpenApiClient {
 				}
 			} else if (fileGatewayRes.getCode() == FileGatewayRes.RETRY_CODE) {
 				if (retryNum < FILE_GW_MAX_RETRY_NUM) {
-					accessTokenClient.setForceCacheInvalid(true);
+					getOrInitAccessTokenClient().setForceCacheInvalid(true);
 					uploadFirstIfHasFile(bizParam, ++retryNum);
 				} else {
 					log.error("upload file error reach max retryCount:{},httpCode:{},bodyStr:{}", retryNum,
@@ -325,15 +334,7 @@ public class WacaiOpenApiClient {
 						callback.onFailure(new WacaiOpenApiResponseException(ErrorCode.CLIENT_SYSTEM_ERROR));
 						return;
 					}
-					if (wacaiErrorResponse.getCode() == ErrorCode.ACCESS_TOKEN_EXPIRED.getCode()
-							|| wacaiErrorResponse.getCode() == ErrorCode.INVALID_ACCESS_TOKEN.getCode()) {
-
-						log.info("Access token invalid or expired, apply new one instead.");
-						accessTokenClient.setForceCacheInvalid(true);
-						doInvoke(wacaiOpenApiRequest, type, callback);
-					} else {
-						callback.onFailure(new WacaiOpenApiResponseException(wacaiErrorResponse));
-					}
+					callback.onFailure(new WacaiOpenApiResponseException(wacaiErrorResponse));
 					return;
 				}
 				// http code 非 200 也不是 400
@@ -363,8 +364,8 @@ public class WacaiOpenApiClient {
 		Map<String, String> headerMap = new HashMap<>();
 		headerMap.put(X_WAC_VERSION, String.valueOf(Version.getProtocolVersion()));
 		headerMap.put(X_WAC_TIMESTAMP, String.valueOf(System.currentTimeMillis()));
-		headerMap.put(X_WAC_ACCESS_TOKEN, accessTokenClient.getCachedAccessToken());
 		headerMap.put(X_WAC_SDK_VERSION, Version.getSdkVersion());
+		headerMap.put(X_WAC_APP_KEY, appKey);
 
 		String signature = generateSignature(wacaiOpenApiRequest.getApiName(),
 				wacaiOpenApiRequest.getApiVersion(),
