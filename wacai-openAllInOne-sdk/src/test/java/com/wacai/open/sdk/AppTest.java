@@ -25,7 +25,8 @@ public class AppTest {
 
 	@Test(expected = WacaiOpenApiResponseException.class)
 	public void test() {
-		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.dubbo.teacher.getbyid", "1.0.0");
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.dubbo.teacher.getbyid",
+				"1.0.0");
 		wacaiOpenApiRequest.putBizParam("id", "12");
 
 		Teacher teacher = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<Teacher>() {
@@ -36,6 +37,7 @@ public class AppTest {
 
 	@Data
 	private static class Teacher {
+
 		private String name;
 
 		private int id;
@@ -43,7 +45,8 @@ public class AppTest {
 
 	@Test
 	public void test2() {
-		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.api.transparent", "1.0.0");
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.api.transparent",
+				"1.0.0");
 		wacaiOpenApiRequest.setByteBuffer("{\"a\": \"1\"}".getBytes());
 
 		byte[] teacher = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<byte[]>() {
