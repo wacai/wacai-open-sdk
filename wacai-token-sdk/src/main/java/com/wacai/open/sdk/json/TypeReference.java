@@ -5,7 +5,7 @@ import java.lang.reflect.Type;
 
 /**
  * This generic abstract class is used for obtaining full generics type information by sub-classing;
- * it must be converted to {@link ResolvedType} implementation (implemented by <code>JavaType</code>
+ * it must be converted to implementation (implemented by <code>JavaType</code>
  * from "databind" bundle) to be used. Class is based on ideas from <a
  * href="http://gafter.blogspot.com/2006/12/super-type-tokens.html" >http://gafter.blogspot.com/2006/12/super-type-tokens.html</a>,
  * Additional idea (from a suggestion made in comments of the article) is to require bogus
@@ -17,7 +17,7 @@ import java.lang.reflect.Type;
  *  TypeReference ref = new TypeReference&lt;List&lt;Integer&gt;&gt;() { };
  * </pre>
  * which can be passed to methods that accept TypeReference, or resolved using
- * <code>TypeFactory</code> to obtain {@link ResolvedType}.
+ * <code>TypeFactory</code> to obtain.
  */
 public abstract class TypeReference<T> implements Comparable<TypeReference<T>> {
 

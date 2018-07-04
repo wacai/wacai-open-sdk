@@ -27,6 +27,7 @@ public class JsonConfig {
 
 	/**
 	 * 设置默认json处理器
+	 * @param value json处理器
 	 */
 	public void setDefaultProcessor(JsonProcessor value) {
 		defaultProc = value;
