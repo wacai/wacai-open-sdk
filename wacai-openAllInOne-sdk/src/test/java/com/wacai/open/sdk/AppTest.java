@@ -1,6 +1,7 @@
 package com.wacai.open.sdk;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
 
 import com.alibaba.fastjson.JSON;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
@@ -70,7 +71,6 @@ public class AppTest {
 
 		Assert.assertNotNull(cash);
 		Assert.assertThat(cash.a, equalTo(12));
-		Assert.assertThat(cash.b, equalTo(1234));
 	}
 
 	@Data
@@ -80,5 +80,29 @@ public class AppTest {
 		private Integer b;
 
 		private Map<String, Object> c;
+	}
+
+	@Test
+	public void test4() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.error.code",
+				"1.0.0");
+
+		try {
+			wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<String>() {
+			});
+		} catch (WacaiOpenApiResponseException e) {
+			Assert.assertThat(e.getCode(), is(equalTo(1003230001)));
+		}
+	}
+
+	@Test
+	public void test5() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.error.code",
+				"1.0.0");
+		String codeParam = "12";
+		wacaiOpenApiRequest.putBizParam("code", codeParam);
+
+		String code = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, String.class);
+		Assert.assertThat(code + "", is(equalTo(codeParam)));
 	}
 }
