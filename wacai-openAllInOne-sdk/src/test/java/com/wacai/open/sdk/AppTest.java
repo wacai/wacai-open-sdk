@@ -2,6 +2,7 @@ package com.wacai.open.sdk;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.core.IsNull.notNullValue;
 
 import com.alibaba.fastjson.JSON;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
@@ -21,22 +22,35 @@ public class AppTest {
 	public static void init() {
 		wacaiOpenApiClient = new WacaiOpenApiClient("5nteennva5ah",
 				"bec93f8ffe88da37");
-		wacaiOpenApiClient.setGatewayEntryUrl("http://localhost:8060/gw/api_entry");
-		wacaiOpenApiClient.setGatewayAuthUrl("http://open.wacaiyun.com/gw/auth");
+		wacaiOpenApiClient.setGatewayEntryUrl("http://open.wacaiyun.com/gw/api_entry");
+		wacaiOpenApiClient.setGatewayAuthUrl("http://open.wacaiyun.com/token/auth");
 
 		wacaiOpenApiClient.init();
 	}
 
-	@Test(expected = WacaiOpenApiResponseException.class)
-	public void test() {
+	@Test
+	public void test0() {
 		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.dubbo.teacher.getbyid",
 				"1.0.0");
-		wacaiOpenApiRequest.putBizParam("id", "12");
+		wacaiOpenApiRequest.putBizParam("id", "10");
 
-		Teacher teacher = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<Teacher>() {
-		});
+		Teacher teacher = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Teacher.class);
+		Assert.assertThat(teacher, is(notNullValue()));
+		Assert.assertThat(teacher.id, is(equalTo(88)));
+	}
 
-		Assert.assertNotNull(teacher);
+	@Test
+	public void test1() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.dubbo.teacher.getbyid",
+				"1.0.0");
+		wacaiOpenApiRequest.putBizParam("id", "0");
+		try {
+			wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<Teacher>() {
+					});
+			Assert.fail("should throw exception");
+		} catch (WacaiOpenApiResponseException e) {
+			Assert.assertThat(e.getCode(), is(equalTo(100000000)));
+		}
 	}
 
 	@Data
@@ -104,5 +118,84 @@ public class AppTest {
 
 		String code = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, String.class);
 		Assert.assertThat(code + "", is(equalTo(codeParam)));
+	}
+
+	@Test
+	public void test6() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.response.mapping",
+				"1.0.0");
+		int expectedErrorCode = 123;
+		wacaiOpenApiRequest.putBizParam("a", "false");
+		wacaiOpenApiRequest.putBizParam("b", expectedErrorCode);
+		try {
+			wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Map.class);
+			Assert.fail("should throw exception");
+		} catch (WacaiOpenApiResponseException e) {
+			Assert.assertThat(e.getCode(), is(equalTo(expectedErrorCode)));
+		}
+	}
+
+	@Test
+	public void test7() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.response.mapping",
+				"1.0.0");
+		wacaiOpenApiRequest.putBizParam("a", "true");
+		wacaiOpenApiRequest.putBizParam("b", 0);
+
+		Map m = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Map.class);
+		Assert.assertThat(m.size(), is(equalTo(2)));
+	}
+
+	@Test
+	public void test8() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.response.mapping",
+				"1.0.0");
+		int expectedErrorCode = 123;
+		wacaiOpenApiRequest.putBizParam("a", "string");
+		wacaiOpenApiRequest.putBizParam("b", expectedErrorCode);
+
+		try {
+			wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Map.class);
+			Assert.fail("should throw exception");
+		} catch (WacaiOpenApiResponseException e) {
+			Assert.assertThat(e.getCode(), is(equalTo(expectedErrorCode)));
+		}
+	}
+
+	@Test
+	public void test9() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.response.mapping",
+				"1.0.0");
+		wacaiOpenApiRequest.putBizParam("a", "string");
+		wacaiOpenApiRequest.putBizParam("b", 0);
+
+		Map m = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Map.class);
+
+		Assert.assertThat(m.size(), is(equalTo(2)));
+	}
+
+	@Test
+	public void test10() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.dubbo.response.mapping",
+				"1.0.0");
+		wacaiOpenApiRequest.putBizParam("a", 10);
+
+		Teacher teacher = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Teacher.class);
+
+		Assert.assertThat(teacher, is(notNullValue()));
+	}
+
+	@Test
+	public void test11() {
+		WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("guard.test.biz.dubbo.response.mapping",
+				"1.0.0");
+		wacaiOpenApiRequest.putBizParam("a", 0);
+
+		try {
+			wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Teacher.class);
+			Assert.fail("should throw exception");
+		} catch (WacaiOpenApiResponseException e) {
+			Assert.assertThat(e.getCode(), is(equalTo(1103230001)));
+		}
 	}
 }
