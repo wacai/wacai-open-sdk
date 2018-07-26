@@ -120,7 +120,7 @@ public class RequestSignUtil {
 		while (headerNames.hasMoreElements()) {
 			String headerName = headerNames.nextElement();
 			String headerValue = httpServletRequest.getHeader(headerName);
-			headers.put(headerName, headerValue);
+			headers.put(headerName.trim().toLowerCase(), headerValue);
 		}
 		return headers;
 	}
