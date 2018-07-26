@@ -8,7 +8,7 @@
   <groupId>com.wacai</groupId>
   <artifactId>wacai-open-sdk</artifactId>
   <packaging>pom</packaging>
-  <version>1.4.1</version>
+  <version>1.4.2</version>
   <name>wacai-open-sdk</name>
   <description>wacai open sdk</description>
   <url>https://github.com/wacai/wacai-open-sdk</url>
