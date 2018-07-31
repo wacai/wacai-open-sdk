@@ -1,7 +1,7 @@
 ### wacai-openAllInOne-sdk是用来跟API网关交互的sdk
 
 #### 依赖GAV
-**依赖并未提交到maven中央仓库，建议使用者clone代码修改之后deploy到自己公司的私服**
+**依赖已经提交到 maven 中央仓库，直接使用即可**
 ```xml
 <dependency>
    <groupId>com.wacai</groupId>
@@ -13,7 +13,7 @@
 ![交互图](doc/struct.png)
 
 #### 核心功能
-1.  封装和授权系统的[交互逻辑](doc/api_auth.md)
+1.  ~~封装和授权系统的[交互逻辑](doc/api_auth.md)~~，高版本的 SDK 的不再使用 token，而是和 API 网关直连
 2.  封装和API网关[协议及透传请求](doc/api_entry.md)实现细节
 3.  封装参数[签名](doc/api_sign.md)逻辑
 4.  被调用时的参数[请求签名校验](doc/request_sign.md)
