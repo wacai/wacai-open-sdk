@@ -9,16 +9,12 @@ import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TIMESTAMP;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_TRACE_ID;
 import static com.wacai.open.sdk.request.WacaiOpenApiHeader.X_WAC_VERSION;
 
-import com.alibaba.fastjson.JSON;
-import com.wacai.open.sdk.auth.AccessTokenClient;
 import com.wacai.open.sdk.errorcode.ErrorCode;
 import com.wacai.open.sdk.exception.WacaiOpenApiResponseException;
 import com.wacai.open.sdk.json.JsonProcessor;
 import com.wacai.open.sdk.json.JsonTool;
 import com.wacai.open.sdk.json.TypeReference;
 import com.wacai.open.sdk.request.WacaiOpenApiRequest;
-import com.wacai.open.sdk.response.FileGatewayRes;
-import com.wacai.open.sdk.response.RemoteFile;
 import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.response.WacaiOpenApiResponseCallback;
 import com.wacai.open.sdk.util.SignUtil;
@@ -37,7 +33,6 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Headers;
 import okhttp3.MediaType;
-import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -54,11 +49,6 @@ public class WacaiOpenApiClient {
 
 	private static final MediaType OBJ_STREAM = MediaType.parse("application/octet-stream");
 
-	/**
-	 * 文件网关失败最大重试次数
-	 */
-	private static final int FILE_GW_MAX_RETRY_NUM = 3;
-
 	private static final List<String> SIGN_HEADERS = Arrays.asList(X_WAC_VERSION, X_WAC_TIMESTAMP,
 			X_WAC_ACCESS_TOKEN, X_WAC_APP_KEY);
 
@@ -69,21 +59,17 @@ public class WacaiOpenApiClient {
 	@Setter
 	private OkHttpClient client;
 
-	private AccessTokenClient accessTokenClient;
-
 	private final AtomicBoolean initFlag = new AtomicBoolean(false);
 
 	@Setter
 	private String gatewayEntryUrl = "https://open.wacai.com/gw/api_entry";
 
+	@Deprecated
 	@Setter
 	private String gatewayAuthUrl = "https://open.wacai.com/gw/auth";
 
 	@Setter
 	private JsonProcessor processor;
-
-	@Setter
-	private String fileGatewayEntryUrl = "http://file.wacai.info/upload/normal/const";
 
 	public WacaiOpenApiClient(String appKey, String appSecret) {
 		this.appKey = appKey;
@@ -113,23 +99,6 @@ public class WacaiOpenApiClient {
 			this.client = new OkHttpClient();
 		}
 		JsonTool.initJsonProcess(processor);
-	}
-
-	private void initAccessTokenClient() {
-		this.accessTokenClient = new AccessTokenClient(appKey, appSecret);
-		this.accessTokenClient.setGatewayAuthUrl(gatewayAuthUrl);
-		this.accessTokenClient.init();
-	}
-
-	private AccessTokenClient getOrInitAccessTokenClient() {
-		if (accessTokenClient == null) {
-			synchronized (this) {
-				if (accessTokenClient == null) {
-					initAccessTokenClient();
-				}
-			}
-		}
-		return accessTokenClient;
 	}
 
 	public <T> T invoke(WacaiOpenApiRequest wacaiOpenApiRequest, TypeReference<T> typeReference) {
@@ -200,71 +169,8 @@ public class WacaiOpenApiClient {
 	}
 
 	private byte[] assemblyRequestBody(WacaiOpenApiRequest wacaiOpenApiRequest) {
-		Map<String, Object> bizParam = uploadFirstIfHasFile(wacaiOpenApiRequest.getBizParam(), 0);
+		Map<String, Object> bizParam = wacaiOpenApiRequest.getBizParam();
 		return JsonTool.serialization(bizParam);
-	}
-
-	private Map<String, byte[]> filterByteArray(Map<String, Object> bizParam) {
-		Map<String, byte[]> fileParam = null;
-		for (Map.Entry<String, Object> entry : bizParam.entrySet()) {
-			Object paramValue = entry.getValue();
-			if (paramValue instanceof byte[]) {
-				if (fileParam == null) {
-					fileParam = new HashMap<>();
-				}
-				fileParam.put(entry.getKey(), (byte[]) paramValue);
-			}
-		}
-		return fileParam;
-	}
-
-	private Map<String, Object> uploadFirstIfHasFile(Map<String, Object> bizParam, int retryNum) {
-		Map<String, byte[]> fileParam = filterByteArray(bizParam);
-		if (fileParam == null || fileParam.isEmpty()) {
-			return bizParam;
-		}
-
-		MultipartBody.Builder bodyBuild = new MultipartBody.Builder().setType(MultipartBody.FORM);
-		for (Map.Entry<String, byte[]> fileEntry : fileParam.entrySet()) {
-			bodyBuild.addFormDataPart("files", fileEntry.getKey(),
-					RequestBody.create(OBJ_STREAM, fileEntry.getValue()));
-		}
-		Request fileRequest = new Request.Builder().url(fileGatewayEntryUrl)
-				.addHeader("X-access-token", getOrInitAccessTokenClient().getCachedAccessToken())
-				.addHeader("appKey", appKey)
-				.post(bodyBuild.build())
-				.build();
-		try (Response response = client.newCall(fileRequest).execute()) {
-			ResponseBody body = response.body();
-			String bodyStr = body.string();
-			int code = response.code();
-			if (code != 200) {
-				log.error("upload file error,httpCode:{},bodyStr:{}", code, bodyStr);
-				throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_ERROR);
-			}
-			FileGatewayRes fileGatewayRes = JSON.parseObject(bodyStr, FileGatewayRes.class);
-			if (fileGatewayRes.getCode() == FileGatewayRes.SUCCESS_CODE) {
-				for (RemoteFile remoteFile : fileGatewayRes.getData()) {
-					bizParam.put(remoteFile.getOriginalName(), remoteFile.getFilename());
-				}
-			} else if (fileGatewayRes.getCode() == FileGatewayRes.RETRY_CODE) {
-				if (retryNum < FILE_GW_MAX_RETRY_NUM) {
-					getOrInitAccessTokenClient().setForceCacheInvalid(true);
-					uploadFirstIfHasFile(bizParam, ++retryNum);
-				} else {
-					log.error("upload file error reach max retryCount:{},httpCode:{},bodyStr:{}", retryNum,
-							code, bodyStr);
-					throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
-				}
-			} else {
-				log.error("upload file error,httpCode:{},bodyStr:{}", code, bodyStr);
-				throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_BIZ_ERROR);
-			}
-		} catch (IOException e) {
-			log.error("upload file error:{}", e);
-			throw new WacaiOpenApiResponseException(ErrorCode.FILE_SYSTEM_CLIENT_ERROR);
-		}
-		return bizParam;
 	}
 
 	public <T> void invoke(final WacaiOpenApiRequest wacaiOpenApiRequest,
