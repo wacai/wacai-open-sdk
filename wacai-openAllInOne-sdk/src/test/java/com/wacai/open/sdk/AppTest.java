@@ -143,7 +143,7 @@ public class AppTest {
 		wacaiOpenApiRequest.putBizParam("b", 0);
 
 		Map m = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Map.class);
-		Assert.assertThat(m.size(), is(equalTo(2)));
+		Assert.assertThat(m.size(), is(equalTo(3)));
 	}
 
 	@Test
@@ -171,7 +171,7 @@ public class AppTest {
 
 		Map m = wacaiOpenApiClient.invoke(wacaiOpenApiRequest, Map.class);
 
-		Assert.assertThat(m.size(), is(equalTo(2)));
+		Assert.assertThat(m.size(), is(equalTo(3)));
 	}
 
 	@Test
