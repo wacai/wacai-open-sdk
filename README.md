@@ -9,7 +9,7 @@
    <version>${version}</version>
 </dependency>
 ```
-如果想直接使用 jar 包，可以去[中央仓库](https://mvnrepository.com/artifact/com.wacai/wacai-token-sdk)下载。
+如果想直接使用 jar 包，可以去[中央仓库](https://mvnrepository.com/artifact/com.wacai/wacai-openAllInOne-sdk)下载。
 
 #### 交互图及对应核心功能
 ![交互图](doc/struct.png)
