@@ -1,10 +1,8 @@
 package com.wacai.open.sdk.filter;
 
-import com.wacai.open.sdk.errorcode.ErrorCode;
-import com.wacai.open.sdk.json.JsonTool;
-import com.wacai.open.sdk.response.WacaiErrorResponse;
 import com.wacai.open.sdk.util.RequestSignUtil;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -13,10 +11,15 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class WacaiOpenSignCheckerFilter implements Filter {
+
+	private static final Logger log = LoggerFactory.getLogger(WacaiOpenSignCheckerFilter.class);
+
+	private static final byte[] sign_not_match_error = "{\"code\": \"10008\", \"error\": \"sign值不匹配\"}"
+			.getBytes(Charset.forName("UTF-8"));
 
 	/**
 	 * 是否开启 sign 校验
@@ -69,11 +72,7 @@ public class WacaiOpenSignCheckerFilter implements Filter {
 		httpServletResponse.setContentType("application/json");
 		httpServletResponse.setCharacterEncoding("UTF-8");
 
-		WacaiErrorResponse wacaiErrorResponse = new WacaiErrorResponse();
-		wacaiErrorResponse.setCode(ErrorCode.SIGN_NOT_MATCH.getCode());
-		wacaiErrorResponse.setError(ErrorCode.SIGN_NOT_MATCH.getDescription());
-
-		httpServletResponse.getOutputStream().write(JsonTool.serialization(wacaiErrorResponse));
+		httpServletResponse.getOutputStream().write(sign_not_match_error);
 		httpServletResponse.flushBuffer();
 	}
 

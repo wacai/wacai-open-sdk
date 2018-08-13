@@ -1,8 +1,5 @@
 package com.wacai.open.sdk.request;
 
-import lombok.experimental.UtilityClass;
-
-@UtilityClass
 public class WacaiOpenApiHeader {
 
 	public static final String X_WAC_VERSION = "x-wac-version";
