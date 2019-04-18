@@ -40,6 +40,10 @@
 ##### 构建Client和Request
 ```java
 WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient("${appKey}", "${appSecret}");
+
+// 如果是测试联调环境,需要添加如下一行代码,线上环境则不需要
+// wacaiOpenApiClient.setGatewayEntryUrl("http://guard.ngrok.wacaiyun.com/gw/api_entry");
+
 wacaiOpenApiClient.init();
 
 WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.order.delete", "v2");

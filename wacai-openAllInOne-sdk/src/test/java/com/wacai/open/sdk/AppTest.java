@@ -22,9 +22,9 @@ public class AppTest {
 	public static void init() {
 		wacaiOpenApiClient = new WacaiOpenApiClient("5nteennva5ah",
 				"bec93f8ffe88da37");
-		wacaiOpenApiClient.setGatewayEntryUrl("http://open.wacaiyun.com/gw/api_entry");
-		wacaiOpenApiClient.setGatewayAuthUrl("http://open.wacaiyun.com/token/auth");
-
+		wacaiOpenApiClient.setGatewayEntryUrl("http://guard.ngrok.wacaiyun.com/gw/api_entry");
+		wacaiOpenApiClient.setGatewayAuthUrl("http://guard.ngrok.wacaiyun.com/token/auth");
+		
 		wacaiOpenApiClient.init();
 	}
 
