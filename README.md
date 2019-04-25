@@ -39,6 +39,8 @@
 
 ##### 构建Client和Request
 ```java
+
+// WacaiOpenApiClient 是一个单例,不要在每次调用时候创建!!!
 WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient("${appKey}", "${appSecret}");
 
 // 如果是测试联调环境,需要添加如下一行代码,线上环境则不需要
