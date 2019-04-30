@@ -73,3 +73,5 @@ wacaiOpenApiClient.invoke(wacaiOpenApiRequest, new TypeReference<OrderDeleteResp
     }
 });
 ```
+##### FAQ
+- sdk中使用okhttp3来发起请求，如果在调试过程中出现response.body.string()报错"java.lang.NoSuchMethodError",请确认项目中okhttp的依赖。这个问题是由低版本的okhttp引起的。
