@@ -48,6 +48,11 @@ WacaiOpenApiClient wacaiOpenApiClient = new WacaiOpenApiClient("${appKey}", "${a
 
 wacaiOpenApiClient.init();
 
+// 在wacaiOpenApiClient中,sdk到网关的超时时间,默认为connectTimeout 10s、readTimeout 10s、writeTimeout 10s。
+// 如果业务需要修改超时时间,可以在wacaiOpenApiClient.init()之后添加如下代码，不指定的话，使用okHttpClient的默认值10s。
+// OkHttpClient okHttpClient = new OkHttpClient().newBuilder(.connectTimeout(60000, TimeUnit.MILLISECONDS).readTimeout(60000, TimeUnit.MILLISECONDS).build();
+// wacaiOpenApiClient.setClient(okHttpClient);
+
 WacaiOpenApiRequest wacaiOpenApiRequest = new WacaiOpenApiRequest("wacai.order.delete", "v2");
 wacaiOpenApiRequest.putBizParam("card_id", "34121141242144");
 wacaiOpenApiRequest.putBizParam("apply_money", 10);
