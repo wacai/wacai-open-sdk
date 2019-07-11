@@ -1,6 +1,6 @@
 ## 鉴权&授权
 
-### 采用OAuth 2机制，具体可以参考[这里](http://www.ruanyifeng.com/blog/2014/05/oauth_2_0.html)
+### 采用OAuth 2机制，具体可以参考[这里](https://blog.csdn.net/daihuimaozideren/article/details/77508642)
 
 ### 鉴权和授权入口
 - 环境统一入口是`https://open.wacai.com/gw/auth`
@@ -10,7 +10,7 @@
 - 接口路径：/token
 - Content_Type: application/x-www-form-urlencoded
 - 接口参数：
-  - grant_type: 授权类型，必填，当前接口目前只支持 client_credentials
+  - grant_type: 授权类型，必填，当前接口目前只支持 client_credentials，使用的是OAuth2.0中的Client授权模式
   - app_key: 必传
   - timestamp: 当前时间戳，以毫秒为单位
   - sign: 请求参数的[token签名](token_sign.md)，必传
@@ -29,7 +29,7 @@
 }
 ```
 - access_token: 授权之后产生的令牌
-- token_type: 目前全是Bearer
+- token_type: 目前全是Bearer(Bearer表明对于第三方访问受限资源时通过token机制来验证)
 - expires_in: 表示access_token的有效时间，以秒为单位，access_token将在这个时间之后过期
 - refresh_token: 用来刷新access_token，重新生成access_token时使用的
 
